@@ -13,6 +13,8 @@
 #define SL PF5 		//solinoid left
 #define SE1 PF6		//for encoders
 #define SE2 PF7
+#define SE1_PIN 	6 //pind 6
+#define SE2_PIN 	7 //pind 7
 
 //catcher motor
 #define CATCHER PB7
@@ -29,10 +31,10 @@
 #define CATCHER_SENSE PD2
 
 //steppers
-#define STEP_L PD4 //basically a clock
-#define STEP_R PD5
-#define DIR_L  PD6
-#define DIR_R  PD7
+#define STEP_L PA4 //basically a clock
+#define DIR_L  PA5
+#define STEP_R PA6
+#define DIR_R  PA7
 
 //UART
 #define TRANS PE0

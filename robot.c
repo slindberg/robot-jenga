@@ -1,11 +1,14 @@
 /* Ernie Bodle - 2017 - 05 - 11
- * motor.c 
+ * robot.c 
  * This lab uses a modified version of my lab4 ECE473 code.
  * 
  * This is for my ROB 421 project
- * For the stepper motor micro stepper chip
  * Jenga Robot 
- */
+ */ 
+//HAVE THE FIRST ITERATION DO:
+//Make the arm/catcher go out to a position and then retract
+//Make it shoot
+//And reel everything up
 
 #include <stdio.h>
 #include <avr/io.h>
@@ -15,8 +18,22 @@
 #include <stdlib.h>
 #include "uart_functions.h"
 #include "motor_functions.h"
-#include "def.h"
+#include "def.h" //functions with my DEFINES in it
 
+
+//--------------------------
+//solinoid
+int16_t sol_position = 0; //reference sol_position
+int16_t sol_des_pos = 0; //where to go
+int8_t sol_dir = 0;
+int8_t s_temp = 0;
+
+void solinoid_cw();
+void solinoid_ccw();
+void solinoid_halt();
+void tcnt0_init(void);
+ISR(TIMER0_OVF_vect);
+//--------------------------
 
 //sensor interrupts
 ISR(INT0_vect);
@@ -24,13 +41,6 @@ ISR(INT1_vect);
 ISR(INT2_vect);
 
 void rob_init();
-
-//HAVE THE FIRST ITERATION DO:
-//Make the arm/catcher go out to a position and then retract
-//Make it shoot
-//And reel everything up
-
-
 
 //--------------------------
 //stepper controls
@@ -42,34 +52,60 @@ ISR(TIMER1_COMPA_vect);
 //there is more in robot_functions.h
 //--------------------------
 
-int main(){
+//for pwm
+void tcnt2_init();
 
-    //variables
-    //int i;
+
+int main(){
 
     //setting up pins
     rob_init();
 
     //-------------------
     //interrupts
+    
+   
+   //ERNIE 
+    //tcnt0 doesn't like tcnt2
+    
+    tcnt0_init(); //motor control
     tcnt1_init(); //steppers
+    tcnt2_init(); //pwm
+
+    uart_init(); //uart
+    sei(); //enable all interrupts before entering loop
+    //-------------------
 
 
-    
-    //tcnt2 is messing with the steppers
-    //it's probably the xck1 pin
-    //tcnt2_init(); //pwm for catcher servo
-    
-    
-    sei(); //enable interrupts before entering loop
 
 
+    //start of jenga protocol
 
     //check for orthagonality here
-    
+
     //make it go down all the way until it hits the bot/top z sensor
 
+    uint8_t factor = (90/72);
     while(1){
+	
+	sol_des_pos += 475/4; 
+	deltaL += 1200*2*factor;
+	deltaR += 1200*2;
+	_delay_ms(1000);  //why the hell is this 5 seconds?
+
+
+	PORTF |= (1<<S_TRIG);	
+	_delay_ms(20);  //why the hell is this 5 seconds?
+	PORTF &= ~(1<<S_TRIG);	
+
+
+
+	sol_des_pos -= 475/4; 
+	deltaL -= 1200*2*factor;
+	deltaR -= 1200*2;
+	
+	_delay_ms(1000); 
+
 	//1. wait for on signal
 	//i = 0;
 	//while(i == 0){
@@ -77,42 +113,35 @@ int main(){
 	//
 	//} //end if
 	//} //end while
-	
 
-	//deltaL += 800;
-	//deltaR += 800;
-	_delay_ms(500); //wait 5 sec
-	deltaL -= 800;
-	deltaR -= 800;
-	_delay_ms(500); //wait 5 sec
 
 	//2a. let catcher down
-	
+
 	//pwm
 	//make the cater motor loose
 	//OCR0 = 0x00?
-		
+
 	//2b. extend arm out
-	
+
 	//figure out where to go
 	//deltaR = ?;
 	//deltaL = ?;
 	//deltaZ = ?;
-	
+
 	//while(invalid block){
 	//3. move to the desired row and position
-	
+
 	//4. Analyze if the robot has a valid block
-	
+
 	//5. If not then go back to 3
 	//} //end while invalid block
-	
-	
-	
+
+
+
 	//6. position servo so it's flush
-	
+
 	//7. shoot! and save the data that it hit the block
-	
+
 	//PORTF |= (1<<S_TRIG); //on
 	//_delay_ms(1ms);
 	//PORTF &= ~(1<<S_TRIG); //off
@@ -120,26 +149,31 @@ int main(){
 	//8. reel everything back up
 	//turn pwm back on
 	//
-	
+
 	//9. send done signal
 	//PORT
-    
-	_delay_ms(100); //get rid of this
-    }
+
+
+    } //end while
 
     return 0; //do I need this in a uC?
-}
+} //end main
 
 void rob_init(){
-    
+
+    //A
+    DDRA |=  (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R);
+    //PORTA will be 0 initally
+
     //B
     DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) | 
-	(0<<ZE1) | (0<<ZE2) | (1<<CATCHER);    
+	(0<<ZE1) | (0<<ZE2) | (1<<CATCHER) | (1<<7);
+    //^ 7 is pwm    
     PORTB |= (1<<ZE1) | (1<<ZE2);
 
     //D
-    DDRD |= (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R)
-	| (0<<TOP_Z) | (0<<BOT_Z) | (0<<CATCHER_SENSE);
+    //DDRD |= (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R)
+    DDRD |= (0<<TOP_Z) | (0<<BOT_Z) | (0<<CATCHER_SENSE);
     PORTD |= (1<<TOP_Z) | (1<<BOT_Z) | (1<<CATCHER_SENSE);
 
     //E
@@ -157,7 +191,7 @@ void rob_init(){
     EICRA &= ~ ( (1<<ISC01) | (1<<ISC00) );
     EICRA &= ~ ( (1<<ISC11) | (1<<ISC10) );
     EICRA &= ~ ( (1<<ISC21) | (1<<ISC20) );
-    
+
     //enable interrupts
     EIMSK |= (1<<INT0) | (1<<INT1) | (1<<INT2);
 }
@@ -178,7 +212,6 @@ ISR(INT1_vect){
 
 
 ISR(INT2_vect){
-
     //PD2
     //have this stop the PWM for the catcher
 }
@@ -187,10 +220,11 @@ ISR(INT2_vect){
 //--------------------------------------------------
 //stepper controls
 void tcnt1_init(void){
-    TCCR1A |= 0x00; 
-    TCCR1B |= (1<<WGM12) | (1<<CS10) | (1<<CS11);
+    TCCR1A = 0x00; 
+    TCCR1B |= (1<<CS12); //(1<<CS10) | (1<<CS11);
+    //| (1<<WGM12);
+    TCCR1C = 0x00;
     TIMSK |= (1<<OCIE1B);
-
     OCR1B |= 0x01;
 } //end tcnt1 init
 
@@ -228,8 +262,8 @@ ISR(TIMER1_COMPB_vect){
 
     //this is the actual inverse of the speed used
     //this makes the trapazoid 
-    static uint16_t used_dampL = 76;  
-    static uint16_t used_dampR = 76;
+    static uint16_t used_dampL = 16;  
+    static uint16_t used_dampR = 16;
 
     //midpoint of the triangle
     //int16_t midL = deltaL - prev_positionL;
@@ -243,6 +277,95 @@ ISR(TIMER1_COMPB_vect){
 } //comp timer 1
 //end stepper controls
 //-----------------------------------------------------
+
+
+//-----------------------------------------------------
+//pwm
+void tcnt2_init(void){
+    //enable timer/counter compare interrupt2 
+    TCCR2 |= (1<<WGM20) | (1<<WGM21) | (1<<COM21) | 
+	(1<<COM20) | (1<<CS21) | (1<<CS20);
+    //TIMSK |= (1<<TOIE2);
+    OCR2 = 185;
+}
+//-----------------------------------------------------
+
+
+
+//---------------------------------------------------------------------
+//this is motor stuff
+void tcnt0_init(void){
+    DDRB |= 0x01;
+    TCCR0 |= (1<<CS00);
+    ASSR |= (0<<AS0);
+    TIMSK |= (1<<TOIE0);
+    //OCR0 = 0x0F; 	//this gets compaired with TCNT0 counter
+
+    //ASSR   |=  (1<<AS0);  	//using the external clock
+    //TIMSK  |=  (1<<TOIE0); //(1<<OCIE0); 	//enable timer/counter0 compare interrupt
+    //TCCR0  |= (1<<CS02) | (1<<CS01); 	//256 mode
+    //OCR0 = 0x0F; 	//this gets compaired with TCNT0 counter
+} //end tcnt)_init
+
+//ERNIE change this to compare vector?
+ISR(TIMER0_OVF_vect){
+    //ERNIE
+    //Have this drive both motors at once!!!
+
+    //make this into a function
+
+    //-----------------------------------------------
+    //Solinoid encoder
+    if(s_temp == 0){
+	if( (bit_is_clear(PINF,SE1_PIN) || bit_is_clear(PINF,SE2_PIN)) ){
+	    s_temp = 1;
+	    //lets se how much of a delay we need
+	    _delay_us(100); //micro seconds, so not too bad?
+
+	    if(bit_is_clear(PINF,SE1_PIN)){
+		sol_dir = 1;
+		sol_position++;
+	    }
+
+	    if(bit_is_clear(PINF,SE2_PIN)){
+		sol_dir = -1;
+		sol_position--;
+	    }
+	}	    
+    }
+    if((bit_is_set(PINF,SE1_PIN)) && bit_is_set(PINF,SE2_PIN)){
+	s_temp = 0;
+	sol_dir = 0;
+    }
+    //-----------------------------------------------
+
+    //solinoid motor
+    if(sol_des_pos == sol_position){
+	solinoid_halt();   
+    } 
+    if(sol_des_pos > sol_position){
+	solinoid_cw();
+    }
+    if(sol_des_pos < sol_position){
+	solinoid_ccw();
+    }
+} //end timer0 ISR
+
+void solinoid_cw(){
+    PORTF &= ~(1<<SL);
+    PORTF |= (1<<SR);
+}
+
+void solinoid_ccw(){
+    PORTF &= ~(1<<SR);
+    PORTF |= (1<<SL);
+}
+
+void solinoid_halt(){
+    PORTF &= ~((1<<SR) | (1<<SL));
+}
+//end motor stuff
+//---------------------------------------------------------------------
 
 
 

@@ -6,7 +6,6 @@
 #include <util/delay.h> 
 #include <math.h>
 
-void tcnt2_init(void);
 
 //--------------------------
 //stepper controls
