@@ -5,10 +5,12 @@
  * This is for my ROB 421 project
  * Jenga Robot 
  */ 
-//HAVE THE FIRST ITERATION DO:
-//Make the arm/catcher go out to a position and then retract
-//Make it shoot
-//And reel everything up
+
+/*HAVE THE FIRST ITERATION DO:
+ * Make the arm/catcher go out to a position and then retract
+ * Make it shoot
+ * And reel everything up
+ */
 
 #include <stdio.h>
 #include <avr/io.h>
@@ -19,6 +21,17 @@
 #include "uart_functions.h"
 #include "motor_functions.h"
 #include "def.h" //functions with my DEFINES in it
+
+//--------------------------
+//ADC
+uint16_t adc_num = 0; //get rid of this
+uint16_t IR0_num = 0; 	//this is the number outputted by the adc
+uint16_t IR1_num = 0; 	//this is the number outputted by the adc
+uint16_t IR2_num = 0; 	//this is the number outputted by the adc
+void adc_init();
+ISR(ADC_vect);
+//--------------------------
+
 
 
 //--------------------------
@@ -47,14 +60,20 @@ void rob_init();
 int16_t deltaL = 0; 
 int16_t deltaR = 0; 
 
+//index stuff
+uint16_t right_index = 0; //right 
+    uint16_t left_index = 0; //left
+
+
 void tcnt1_init();
 ISR(TIMER1_COMPA_vect);
+ISR(TIMER1_COMPB_vect);
 //there is more in robot_functions.h
 //--------------------------
 
 //for pwm
-void tcnt2_init();
-
+void tcnt2_init(); //solinoid motor
+void tcnt3_init(); //for catcher motor
 
 int main(){
 
@@ -63,20 +82,15 @@ int main(){
 
     //-------------------
     //interrupts
-    
-   
-   //ERNIE 
-    //tcnt0 doesn't like tcnt2
-    
     tcnt0_init(); //motor control
     tcnt1_init(); //steppers
-    tcnt2_init(); //pwm
+    tcnt2_init(); //pwm for solinoid motor
+    tcnt3_init(); //pwm for catcher
 
+    adc_init();
     uart_init(); //uart
     sei(); //enable all interrupts before entering loop
     //-------------------
-
-
 
 
     //start of jenga protocol
@@ -85,26 +99,63 @@ int main(){
 
     //make it go down all the way until it hits the bot/top z sensor
 
-    uint8_t factor = (90/72);
     while(1){
+
+
 	
+
+
+	//-----------------------------------------
+	//debug
+
+	/* ADC Debug
+	ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+	ADCSRA |= (1<<ADSC); //starts the ADC conversions
+	uart_puts("IR0: ");
+	uart_puts(itoa(IR0_num, "Hello", 10));
+	uart_putc('\n');
+	uart_putc(((char) 13));
+	_delay_ms(50);	
+
+	ADMUX |= (1<<MUX0); //after clearing this will enable ADC1
+	ADCSRA |= (1<<ADSC); //starts the ADC conversions
+	uart_puts("IR1: ");
+	uart_puts(itoa(IR1_num, "Hello", 10));
+	uart_putc('\n');
+	uart_putc(((char) 13));
+	_delay_ms(50);	
+
+	ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+	ADMUX |= (1<<MUX1); //after clearing this will enable ADC1
+	ADCSRA |= (1<<ADSC); //starts the ADC conversions
+	uart_puts("IR2: ");
+	uart_puts(itoa(IR2_num, "Hello", 10));
+	uart_putc('\n');
+	uart_putc(((char) 13));
+	_delay_ms(50);	
+	*/
+/*
 	sol_des_pos += 475/4; 
-	deltaL += 1200*2*factor;
-	deltaR += 1200*2;
-	_delay_ms(1000);  //why the hell is this 5 seconds?
+	deltaL += 800 * (96/20);
+	deltaR += 800 * (72/20);
+	_delay_ms(5000);  //why the hell is this 5 seconds?
 
-
-	PORTF |= (1<<S_TRIG);	
-	_delay_ms(20);  //why the hell is this 5 seconds?
-	PORTF &= ~(1<<S_TRIG);	
-
-
+	*
+	   PORTF |= (1<<S_TRIG);	
+	   _delay_ms(20);  //why the hell is this 5 seconds?
+	   PORTF &= ~(1<<S_TRIG);	
+	   *
+	   
+	//1600 steps is 180 deg for the steppers
+	//72/20 
 
 	sol_des_pos -= 475/4; 
-	deltaL -= 1200*2*factor;
-	deltaR -= 1200*2;
-	
-	_delay_ms(1000); 
+	deltaL -= 800 * (96/20);
+	deltaR -= 800 * (72/20);
+	_delay_ms(5000); 
+	*/
+	//end debug	
+	//-----------------------------------------
 
 	//1. wait for on signal
 	//i = 0;
@@ -169,6 +220,7 @@ void rob_init(){
     DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) | 
 	(0<<ZE1) | (0<<ZE2) | (1<<CATCHER) | (1<<7);
     //^ 7 is pwm    
+    DDRB |= (1<<0) | (1<<1); //debug
     PORTB |= (1<<ZE1) | (1<<ZE2);
 
     //D
@@ -179,12 +231,13 @@ void rob_init(){
     //E
     DDRE |= (0<<TRANS) | (1<<RECEV) | 
 	(0<<START_SIG) | (1<<END_SIG) | (0<<ORTHO);
+    DDRE |= (1<<3); //pwm
     PORTE |= (1<<TRANS) | (1<<ORTHO) | (1<<START_SIG);
 
     //F
     DDRF |= (0<<IR0) | (0<<IR1) | (0<<IR2)
 	| (1<<S_TRIG) | (1<<SR) | (1<<SL) | (0<<SE1) | (0<<SE2);
-    PORTF |= (1<<IR0) | (1<<IR1) | (1<<IR2) | (1<<SE1) | (1<<SE2);
+    PORTF |= (0<<IR0) | (0<<IR1) | (0<<IR2) | (1<<SE1) | (1<<SE2);
 
 
     //enable interrupts for INTx rising edge
@@ -220,31 +273,47 @@ ISR(INT2_vect){
 //--------------------------------------------------
 //stepper controls
 void tcnt1_init(void){
+    //clk/256
     TCCR1A = 0x00; 
-    TCCR1B |= (1<<CS12); //(1<<CS10) | (1<<CS11);
-    //| (1<<WGM12);
+    TCCR1B |= (1<<CS11) | (1<<CS10); //clk/64
     TCCR1C = 0x00;
-    TIMSK |= (1<<OCIE1B);
-    OCR1B |= 0x01;
+
+    //these don't actually change at differnt rates...
+    //right stepper
+    TIMSK |= (1<<OCIE1A); //output compair match
+    OCR1A |= 0x40; //64 
+
+    //left stepper
+    //TIMSK |= (1<<OCIE1B); //output compair match
+    //OCR1B |= 0xB1; 
+
 } //end tcnt1 init
 
-#define ACCELL_RATE 1 //test it being one for now!
-#define MAX_DAMP 128
-#define MIN_DAMP 24
+#define ACCEL_RATE 5 //test it being one for now!
+#define MAX_DAMP 0x50
+#define MIN_DAMP 0x01
 
-ISR(TIMER1_COMPB_vect){
+ISR(TIMER1_COMPA_vect){ 
     TCNT1 = 0; //change this to CTC mode later
-    static uint16_t countL = 0;
+    //^ CTC mode was giving me interrupt and pin errors
+
+
+
+	//gets data
+//if count is equaly to damp then step, add to index, and add/sub one to delta
+    
+
+//change this to a switch statement function!!!
+//uesd_dampR = Rthing[right_index]; 
+	//used_dampL = Lthing[left_index]; 
+    
+	
+	
+	//clears the steps so it can pulse
+    PORTA &= ~((1<<STEP_L) | (1<<STEP_R));
+
     static uint16_t countR = 0;
-
-    //this was for quarter step
-    //24 is the lowest (fastest) number
-    //64 is still pretty fast
-    //76 still fast but getting a little jumpy
-    //92 
-    //128 is jumpy
-    //255 does not work so somewhere from 128 to 255 it breaks
-
+    static uint16_t countL = 0;
 
     //deltaR/deltaL are where we want to go
     //where we are 
@@ -255,25 +324,65 @@ ISR(TIMER1_COMPB_vect){
     static int16_t prev_positionL = 0;
     static int16_t prev_positionR = 0;
 
+    //when count == used_damp then we step   
+    uint16_t used_dampL = 1; //never let this be 0
+    uint16_t used_dampR = 1;
+
     //basically the inverse of velocity
     //this makes the triangle
     //static int16_t dampL; 
     //static int16_t dampR; 
 
-    //this is the actual inverse of the speed used
-    //this makes the trapazoid 
-    static uint16_t used_dampL = 16;  
-    static uint16_t used_dampR = 16;
-
     //midpoint of the triangle
     //int16_t midL = deltaL - prev_positionL;
     //int16_t midR = deltaR - prev_positionR;
+
+
+    //creating the triangle
+    /* ERNIE make this work
+       if(midL > positionL){
+       dampL -= ACCEL_RATE;
+       } else if(midL < positionL){
+       dampL += ACCEL_RATE;
+       } else {
+       dampL = MIN_DAMP;
+       }
+
+       if(midR > positionR){
+       dampR -= ACCEL_RATE;
+       } else if(midR < positionR){
+       dampR += ACCEL_RATE;
+       } else {
+       dampR = MIN_DAMP;
+       }
+
+    //cut off
+    if(dampL > MAX_DAMP){
+    used_dampL = MAX_DAMP; 
+    } else if(dampL < MIN_DAMP){
+    used_dampL = MIN_DAMP;
+    } else {
+    used_dampL = dampL;
+    }
+
+    if(dampR > MAX_DAMP){
+    used_dampR = MAX_DAMP; 
+    } else if(dampR < MIN_DAMP){
+    used_dampR = MIN_DAMP;
+    } else {
+    used_dampR = dampR;
+    }
+    */
+
 
     //ERNIE get trapazoid working
     //ERNIE make it so both A and B flow at the same rate
     stepper(&countL, &prev_positionL, &positionL, STEP_L, DIR_L, used_dampL, deltaL); 
     stepper(&countR, &prev_positionR, &positionR, STEP_R, DIR_R, used_dampR, deltaR); 
+}
 
+ISR(TIMER1_COMPB_vect){
+    //do nothing for now
 } //comp timer 1
 //end stepper controls
 //-----------------------------------------------------
@@ -295,7 +404,7 @@ void tcnt2_init(void){
 //---------------------------------------------------------------------
 //this is motor stuff
 void tcnt0_init(void){
-    DDRB |= 0x01;
+    //DDRB |= 0x01;
     TCCR0 |= (1<<CS00);
     ASSR |= (0<<AS0);
     TIMSK |= (1<<TOIE0);
@@ -367,7 +476,59 @@ void solinoid_halt(){
 //end motor stuff
 //---------------------------------------------------------------------
 
+//--------------------------------------------
+//Catcher motor pwm
+void tcnt3_init(){
+    TCCR3A |= (1<<WGM33) | (1<<WGM32) | (1<<WGM31) | (1<<WGM30)
+	| (1<<COM1A1) | (1<<CS30);
+    TCCR3B |= (1<<CS30);
+    OCR3A = 0xF0; 
+} //tcnt3_init
+//--------------------------------------------
 
+
+//--------------------------------------------
+//adc stuff
+//ERNIE fix this shit so IRs work!!!
+void adc_init(){
+    DDRF |= (0<<IR0) | (0<<IR1) | (0<<IR2);
+    ADMUX |= (1<<REFS0); //using AVcc with external cap
+
+    ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+    //ADMUX |= (1<<MUX0); //after clearing this will enable ADC1
+    //ADMUX |= (1<<MUX1); //after clearing this will enable ADC2
+
+    //enables adc and interrupt
+    ADCSRA |= (1<<ADEN) | (1<<ADIE); 
+    //scales it down by 128 (idk what clock it uses)
+    ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
+} //end adc init
+
+ISR(ADC_vect){
+    adc_num = ADC;
+    //why do I do this again?
+    ADCSRA |= (1<<ADSC);
+
+    if(bit_is_clear(ADMUX, MUX0) && bit_is_clear(ADMUX, MUX1)){
+	IR0_num = adc_num;
+    } else if(bit_is_set(ADMUX, MUX0)) {
+	IR1_num = adc_num;
+    } else {
+	IR2_num = adc_num;
+    }
+
+    if(adc_num > 300)
+	PORTB |= (1<<0);
+    else 
+	PORTB &= ~(1<<0);
+
+    if(adc_num > 400){
+	PORTB |= (1<<1);
+    } else {
+	PORTB &= ~(1<<1);
+    }
+} //ISR ADC
+//--------------------------------------------
 
 
 
