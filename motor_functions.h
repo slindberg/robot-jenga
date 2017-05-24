@@ -6,16 +6,16 @@
 #include <util/delay.h> 
 #include <math.h>
 
+typedef struct StepperState {
+  uint8_t travel_mask;
+  uint8_t direction_mask;
+  int8_t *step_intervals;
+  uint16_t total_intervals;
+  uint16_t interval_index;
+  uint8_t interval_count;
+  uint8_t steps_remaining;
+  uint8_t call_delay;
+  uint8_t delay_count;
+} StepperState;
 
-//--------------------------
-//stepper controls
-//these need to be global in the driver functions
-//int16_t deltaL = 0; 
-//int16_t deltaR = 0; 
-
-//ERNIE should I pass in a struct? Or does it not matter?
-void stepper(uint16_t *count, int16_t *prev_position, int16_t *position, 
-	uint8_t step, uint8_t dir, uint16_t damp, int16_t delta); 
-//end stepper controls
-//--------------------------
-
+void stepper(StepperState *state);

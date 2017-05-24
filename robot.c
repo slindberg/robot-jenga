@@ -22,6 +22,14 @@
 #include "motor_functions.h"
 #include "def.h" //functions with my DEFINES in it
 
+int8_t step_intervals_left[] = {
+5,7,7,10,12,14,18,21,25,28,32,36,39,42,44,48,49,51,52,51,52,52,51,52,51,51,51,51,50,51,50,50,50,50,50,50,49,50,49,49,50,50,50,50,49,50,50,50,50,49,49,50,49,48,49,49,48,48,48,48,47,45,43,41,38,35,32,29,26,22,20,16,13,11,9,7,5,5
+};
+
+int8_t step_intervals_right[] = {
+1,1,2,2,3,3,5,5,7,8,9,11,13,14,15,17,19,19,20,21,21,22,22,23,23,24,24,24,25,25,26,26,26,27,28,28,28,29,30,30,34,38,41,43,46,48,50,53,55,57,59,61,62,65,65,68,68,70,72,72,72,70,69,66,62,58,53,48,44,38,32,28,23,18,15,12,10,8
+};
+
 //--------------------------
 //ADC
 uint16_t adc_num = 0; //get rid of this
@@ -162,12 +170,7 @@ int main(){
 	   _delay_ms(20);  //why the hell is this 5 seconds?
 	   PORTF &= ~(1<<S_TRIG);	
 
-	//1600 steps is 180 deg for the steppers
-	//72/20 
-
 	sol_des_pos -= 475/4; 
-	deltaL -= 800 * (96/20);
-	deltaR -= 800 * (72/20);
 	_delay_ms(5000); 
 	*/
 	//end debug	
@@ -313,95 +316,33 @@ ISR(TIMER1_COMPA_vect){
     TCNT1 = 0; //change this to CTC mode later
     //^ CTC mode was giving me interrupt and pin errors
 
-    //gets data
-    //if count is equaly to damp then step, add to index, and add/sub one to delta
-
-
-    //change this to a switch statement function!!!
-    //uesd_dampR = Rthing[right_index]; 
-    //used_dampL = Lthing[left_index]; 
-
-    /* debug
-       static uint8_t blah = 0;
-       if(blah == 200){   
-       CR3A++;
-       blah = 0;
-       }
-       blah++; 
-       */
-
     //clears the steps so it can pulse
     PORTA &= ~((1<<STEP_L) | (1<<STEP_R));
 
-    static uint16_t countR = 0;
-    static uint16_t countL = 0;
+    static StepperState left_stepper = {
+      .travel_mask = 1 << STEP_L,
+      .direction_mask = 1 << DIR_L,
+      .step_intervals = step_intervals_left,
+      .total_intervals = sizeof(step_intervals_left),
+      .interval_index = 0,
+      .steps_remaining = 0,
+      .delay_count = 0,
+      .interval_count = 0
+    };
 
-    //deltaR/deltaL are where we want to go
-    //where we are 
-    static int16_t positionL = 0;
-    static int16_t positionR = 0;
+    static StepperState right_stepper = {
+      .travel_mask = 1 << STEP_R,
+      .direction_mask = 1 << DIR_R,
+      .step_intervals = step_intervals_right,
+      .total_intervals = sizeof(step_intervals_right),
+      .interval_index = 0,
+      .steps_remaining = 0,
+      .delay_count = 0,
+      .interval_count = 0
+    };
 
-    //this is keeping track of our inital position
-    static int16_t prev_positionL = 0;
-    static int16_t prev_positionR = 0;
-
-    //when count == used_damp then we step   
-    uint16_t used_dampL = 0x01; //never let this be 0
-    uint16_t used_dampR = 0x01;
-
-    //basically the inverse of velocity
-    //this makes the triangle
-    //static int16_t dampL; 
-    //static int16_t dampR; 
-
-    //midpoint of the triangle
-    //int16_t midL = deltaL - prev_positionL;
-    //int16_t midR = deltaR - prev_positionR;
-
-
-    //creating the triangle
-    /* ERNIE make this work
-       if(midL > positionL){
-       dampL -= ACCEL_RATE;
-       } else if(midL < positionL){
-       dampL += ACCEL_RATE;
-       } else {
-       dampL = MIN_DAMP;
-       }
-
-       if(midR > positionR){
-       dampR -= ACCEL_RATE;
-       } else if(midR < positionR){
-       dampR += ACCEL_RATE;
-       } else {
-       dampR = MIN_DAMP;
-       }
-
-    //cut off
-    if(dampL > MAX_DAMP){
-    used_dampL = MAX_DAMP; 
-    } else if(dampL < MIN_DAMP){
-    used_dampL = MIN_DAMP;
-    } else {
-    used_dampL = dampL;
-    }
-
-    if(dampR > MAX_DAMP){
-    used_dampR = MAX_DAMP; 
-    } else if(dampR < MIN_DAMP){
-    used_dampR = MIN_DAMP;
-    } else {
-    used_dampR = dampR;
-    }
-    */
-
-
-    //ERNIE get trapazoid working
-    //ERNIE make it so both A and B flow at the same rate
-    stepper(&countL, &prev_positionL, &positionL, STEP_L, DIR_L, used_dampL, deltaL); 
-    stepper(&countR, &prev_positionR, &positionR, STEP_R, DIR_R, used_dampR, deltaR); 
-
-
+    stepper(&left_stepper);
+    stepper(&right_stepper);
 }
 
 ISR(TIMER1_COMPB_vect){
