@@ -5,9 +5,6 @@
 //math shit
 #define COG_FACTOR (96/72) //multiply this one last
 
-
-
-
 //ADC
 #define IR0 PF0
 #define IR1 PF1

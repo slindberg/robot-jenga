@@ -33,7 +33,6 @@ ISR(ADC_vect);
 //--------------------------
 
 
-
 //--------------------------
 //solinoid
 int16_t sol_position = 0; //reference sol_position
@@ -62,7 +61,7 @@ int16_t deltaR = 0;
 
 //index stuff
 uint16_t right_index = 0; //right 
-    uint16_t left_index = 0; //left
+uint16_t left_index = 0; //left
 
 
 void tcnt1_init();
@@ -101,51 +100,46 @@ int main(){
 
     while(1){
 
-
-	
-
-
+	_delay_ms(1);
 	//-----------------------------------------
 	//debug
 
 	/* ADC Debug
-	ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
-	ADCSRA |= (1<<ADSC); //starts the ADC conversions
-	uart_puts("IR0: ");
-	uart_puts(itoa(IR0_num, "Hello", 10));
-	uart_putc('\n');
-	uart_putc(((char) 13));
-	_delay_ms(50);	
+	   ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+	   ADCSRA |= (1<<ADSC); //starts the ADC conversions
+	   uart_puts("IR0: ");
+	   uart_puts(itoa(IR0_num, "Hello", 10));
+	   uart_putc('\n');
+	   uart_putc(((char) 13));
+	   _delay_ms(50);	
 
-	ADMUX |= (1<<MUX0); //after clearing this will enable ADC1
-	ADCSRA |= (1<<ADSC); //starts the ADC conversions
-	uart_puts("IR1: ");
-	uart_puts(itoa(IR1_num, "Hello", 10));
-	uart_putc('\n');
-	uart_putc(((char) 13));
-	_delay_ms(50);	
+	   ADMUX |= (1<<MUX0); //after clearing this will enable ADC1
+	   ADCSRA |= (1<<ADSC); //starts the ADC conversions
+	   uart_puts("IR1: ");
+	   uart_puts(itoa(IR1_num, "Hello", 10));
+	   uart_putc('\n');
+	   uart_putc(((char) 13));
+	   _delay_ms(50);	
 
-	ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
-	ADMUX |= (1<<MUX1); //after clearing this will enable ADC1
-	ADCSRA |= (1<<ADSC); //starts the ADC conversions
-	uart_puts("IR2: ");
-	uart_puts(itoa(IR2_num, "Hello", 10));
-	uart_putc('\n');
-	uart_putc(((char) 13));
-	_delay_ms(50);	
-	*/
-/*
+	   ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+	   ADMUX |= (1<<MUX1); //after clearing this will enable ADC1
+	   ADCSRA |= (1<<ADSC); //starts the ADC conversions
+	   uart_puts("IR2: ");
+	   uart_puts(itoa(IR2_num, "Hello", 10));
+	   uart_putc('\n');
+	   uart_putc(((char) 13));
+	   _delay_ms(50);	
+	   */
+
 	sol_des_pos += 475/4; 
 	deltaL += 800 * (96/20);
 	deltaR += 800 * (72/20);
 	_delay_ms(5000);  //why the hell is this 5 seconds?
 
-	*
-	   PORTF |= (1<<S_TRIG);	
-	   _delay_ms(20);  //why the hell is this 5 seconds?
-	   PORTF &= ~(1<<S_TRIG);	
-	   *
-	   
+	PORTF |= (1<<S_TRIG);	
+	_delay_ms(20);  //why the hell is this 5 seconds?
+	PORTF &= ~(1<<S_TRIG);	
+
 	//1600 steps is 180 deg for the steppers
 	//72/20 
 
@@ -153,7 +147,7 @@ int main(){
 	deltaL -= 800 * (96/20);
 	deltaR -= 800 * (72/20);
 	_delay_ms(5000); 
-	*/
+
 	//end debug	
 	//-----------------------------------------
 
@@ -290,26 +284,31 @@ void tcnt1_init(void){
 } //end tcnt1 init
 
 #define ACCEL_RATE 5 //test it being one for now!
-#define MAX_DAMP 0x50
+#define MAX_DAMP 0x40
 #define MIN_DAMP 0x01
 
 ISR(TIMER1_COMPA_vect){ 
     TCNT1 = 0; //change this to CTC mode later
     //^ CTC mode was giving me interrupt and pin errors
 
+    //gets data
+    //if count is equaly to damp then step, add to index, and add/sub one to delta
 
 
-	//gets data
-//if count is equaly to damp then step, add to index, and add/sub one to delta
-    
+    //change this to a switch statement function!!!
+    //uesd_dampR = Rthing[right_index]; 
+    //used_dampL = Lthing[left_index]; 
 
-//change this to a switch statement function!!!
-//uesd_dampR = Rthing[right_index]; 
-	//used_dampL = Lthing[left_index]; 
-    
-	
-	
-	//clears the steps so it can pulse
+    /* debug
+    static uint8_t blah = 0;
+    if(blah == 200){   
+	CR3A++;
+	blah = 0;
+    }
+    blah++; 
+*/
+
+    //clears the steps so it can pulse
     PORTA &= ~((1<<STEP_L) | (1<<STEP_R));
 
     static uint16_t countR = 0;
@@ -325,8 +324,8 @@ ISR(TIMER1_COMPA_vect){
     static int16_t prev_positionR = 0;
 
     //when count == used_damp then we step   
-    uint16_t used_dampL = 1; //never let this be 0
-    uint16_t used_dampR = 1;
+    uint16_t used_dampL = 0x01; //never let this be 0
+    uint16_t used_dampR = 0x01;
 
     //basically the inverse of velocity
     //this makes the triangle
@@ -479,10 +478,22 @@ void solinoid_halt(){
 //--------------------------------------------
 //Catcher motor pwm
 void tcnt3_init(){
-    TCCR3A |= (1<<WGM33) | (1<<WGM32) | (1<<WGM31) | (1<<WGM30)
-	| (1<<COM1A1) | (1<<CS30);
-    TCCR3B |= (1<<CS30);
-    OCR3A = 0xF0; 
+    //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
+    //clear when (OCR3A == TCNT3), set on compare match 
+    TCCR3A |= (1<<WGM31) | (1<<COM3A1);
+    TCCR3B |= (1<<WGM33) | (1<<WGM32); 
+
+    //1/64 scaler
+    TCCR3B |=  (1<<CS31) | (1<<CS30);  
+    
+    //Do I even need this?
+    ETIMSK |= (1<<OCIE3A);
+   
+   //For scaling 
+    ICR3 = 5000; //Top
+    OCR3A = 250; //spool
+    //OCR3A = 375; //stop
+    //OCR3A = 250; //other
 } //tcnt3_init
 //--------------------------------------------
 
@@ -517,16 +528,17 @@ ISR(ADC_vect){
 	IR2_num = adc_num;
     }
 
-    if(adc_num > 300)
-	PORTB |= (1<<0);
-    else 
-	PORTB &= ~(1<<0);
+    /*debug
+      if(adc_num > 300)
+      PORTB |= (1<<0);
+      else 
+      PORTB &= ~(1<<0);
 
-    if(adc_num > 400){
-	PORTB |= (1<<1);
-    } else {
-	PORTB &= ~(1<<1);
-    }
+      if(adc_num > 400){
+      PORTB |= (1<<1);
+      } else {
+      PORTB &= ~(1<<1);
+      }*/
 } //ISR ADC
 //--------------------------------------------
 
