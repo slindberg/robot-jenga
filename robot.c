@@ -34,15 +34,27 @@ ISR(ADC_vect);
 
 
 //--------------------------
-//solinoid
+//solinoid and z motor
 int16_t sol_position = 0; //reference sol_position
 int16_t sol_des_pos = 0; //where to go
 int8_t sol_dir = 0;
 int8_t s_temp = 0;
 
+int16_t z_position = 0; //reference z_position
+int16_t z_des_pos = 0; //where to go
+int8_t z_dir = 0;
+int8_t z_temp = 0;
+
+
+//ERNIE make sure these actually go CW and CCW
+void z_cw();
+void z_ccw();
+void z_halt();
+
 void solinoid_cw();
 void solinoid_ccw();
 void solinoid_halt();
+
 void tcnt0_init(void);
 ISR(TIMER0_OVF_vect);
 //--------------------------
@@ -74,6 +86,25 @@ ISR(TIMER1_COMPB_vect);
 void tcnt2_init(); //solinoid motor
 void tcnt3_init(); //for catcher motor
 
+void get_IR_data();
+
+void get_array(){
+    uint8_t i = 0;
+    uint8_t temp = 0;
+    char c = '0';
+    char str[3];
+
+    for(i = 0; i < 3; i++){
+	c = uart_getc();
+	str[i] = c;
+    }
+
+    temp = atoi(str);
+    temp++;	
+
+    uart_puts(itoa(temp, "", 10));
+}
+
 int main(){
 
     //setting up pins
@@ -91,54 +122,45 @@ int main(){
     sei(); //enable all interrupts before entering loop
     //-------------------
 
-
     //start of jenga protocol
 
     //check for orthagonality here
 
     //make it go down all the way until it hits the bot/top z sensor
 
+
     while(1){
 
-	_delay_ms(1);
 	//-----------------------------------------
 	//debug
+	
 
-	/* ADC Debug
-	   ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
-	   ADCSRA |= (1<<ADSC); //starts the ADC conversions
-	   uart_puts("IR0: ");
-	   uart_puts(itoa(IR0_num, "Hello", 10));
-	   uart_putc('\n');
-	   uart_putc(((char) 13));
-	   _delay_ms(50);	
+    //uart_puts(itoa(sol_position, "", 10));
+    
+    //z_des_pos += 10;
+    uart_puts("Before\n");
+    uart_puts(itoa(123, "", 10));
+    uart_puts("\n");
+   _delay_ms(100); 
+    
+   //z_des_pos -= 10;
+    
+   uart_puts("After\n");
+    uart_puts(itoa(z_position, "", 10));
+    uart_puts("\n");
+   _delay_ms(100); 
+	
+   //get_array();
 
-	   ADMUX |= (1<<MUX0); //after clearing this will enable ADC1
-	   ADCSRA |= (1<<ADSC); //starts the ADC conversions
-	   uart_puts("IR1: ");
-	   uart_puts(itoa(IR1_num, "Hello", 10));
-	   uart_putc('\n');
-	   uart_putc(((char) 13));
-	   _delay_ms(50);	
+	/*
+	   sol_des_pos += 475/4; 
+	   deltaL += 800 * (96/20);
+	   deltaR += 800 * (72/20);
+	   _delay_ms(5000);  //why the hell is this 5 seconds?
 
-	   ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
-	   ADMUX |= (1<<MUX1); //after clearing this will enable ADC1
-	   ADCSRA |= (1<<ADSC); //starts the ADC conversions
-	   uart_puts("IR2: ");
-	   uart_puts(itoa(IR2_num, "Hello", 10));
-	   uart_putc('\n');
-	   uart_putc(((char) 13));
-	   _delay_ms(50);	
-	   */
-
-	sol_des_pos += 475/4; 
-	deltaL += 800 * (96/20);
-	deltaR += 800 * (72/20);
-	_delay_ms(5000);  //why the hell is this 5 seconds?
-
-	PORTF |= (1<<S_TRIG);	
-	_delay_ms(20);  //why the hell is this 5 seconds?
-	PORTF &= ~(1<<S_TRIG);	
+	   PORTF |= (1<<S_TRIG);	
+	   _delay_ms(20);  //why the hell is this 5 seconds?
+	   PORTF &= ~(1<<S_TRIG);	
 
 	//1600 steps is 180 deg for the steppers
 	//72/20 
@@ -147,7 +169,7 @@ int main(){
 	deltaL -= 800 * (96/20);
 	deltaR -= 800 * (72/20);
 	_delay_ms(5000); 
-
+	*/
 	//end debug	
 	//-----------------------------------------
 
@@ -300,13 +322,13 @@ ISR(TIMER1_COMPA_vect){
     //used_dampL = Lthing[left_index]; 
 
     /* debug
-    static uint8_t blah = 0;
-    if(blah == 200){   
-	CR3A++;
-	blah = 0;
-    }
-    blah++; 
-*/
+       static uint8_t blah = 0;
+       if(blah == 200){   
+       CR3A++;
+       blah = 0;
+       }
+       blah++; 
+       */
 
     //clears the steps so it can pulse
     PORTA &= ~((1<<STEP_L) | (1<<STEP_R));
@@ -378,6 +400,8 @@ ISR(TIMER1_COMPA_vect){
     //ERNIE make it so both A and B flow at the same rate
     stepper(&countL, &prev_positionL, &positionL, STEP_L, DIR_L, used_dampL, deltaL); 
     stepper(&countR, &prev_positionR, &positionR, STEP_R, DIR_R, used_dampR, deltaR); 
+
+
 }
 
 ISR(TIMER1_COMPB_vect){
@@ -447,6 +471,44 @@ ISR(TIMER0_OVF_vect){
     }
     //-----------------------------------------------
 
+    //-----------------------------------------------
+    //Solinoid encoder
+    if(z_temp == 0){
+	if( (bit_is_clear(PINB,ZE1_PIN) || bit_is_clear(PINB,ZE2_PIN)) ){
+	    z_temp = 1;
+	    //lets se how much of a delay we need
+	    _delay_us(100); //micro seconds, so not too bad?
+
+	    if(bit_is_clear(PINB,ZE1_PIN)){
+		z_dir = 1;
+		z_position++;
+	    }
+
+	    if(bit_is_clear(PINB,ZE2_PIN)){
+		z_dir = -1;
+		z_position--;
+	    }
+	}	    
+    }
+    if((bit_is_set(PINB,ZE1_PIN)) && bit_is_set(PINB,ZE2_PIN)){
+	z_temp = 0;
+	z_dir = 0;
+    }
+    //-----------------------------------------------
+
+
+    //ERNIE Get PID contorl to work!!!
+    //zmotor
+    if(z_des_pos == z_position){
+	z_halt();   
+    } 
+    if(z_des_pos > z_position){
+	z_cw();
+    }
+    if(z_des_pos < z_position){
+	z_ccw();
+    }
+
     //solinoid motor
     if(sol_des_pos == sol_position){
 	solinoid_halt();   
@@ -457,7 +519,22 @@ ISR(TIMER0_OVF_vect){
     if(sol_des_pos < sol_position){
 	solinoid_ccw();
     }
+
 } //end timer0 ISR
+
+void z_cw(){
+    PORTB &= ~(1<<ZMOTOR_L);
+    PORTB |= (1<<ZMOTOR_R);
+}
+
+void z_ccw(){
+    PORTB &= ~(1<<ZMOTOR_R);
+    PORTB |= (1<<ZMOTOR_L);
+}
+
+void z_halt(){
+    PORTB &= ~((1<<ZMOTOR_R) | (1<<ZMOTOR_L));
+}
 
 void solinoid_cw(){
     PORTF &= ~(1<<SL);
@@ -472,6 +549,7 @@ void solinoid_ccw(){
 void solinoid_halt(){
     PORTF &= ~((1<<SR) | (1<<SL));
 }
+
 //end motor stuff
 //---------------------------------------------------------------------
 
@@ -485,11 +563,11 @@ void tcnt3_init(){
 
     //1/64 scaler
     TCCR3B |=  (1<<CS31) | (1<<CS30);  
-    
+
     //Do I even need this?
     ETIMSK |= (1<<OCIE3A);
-   
-   //For scaling 
+
+    //For scaling 
     ICR3 = 5000; //Top
     OCR3A = 250; //spool
     //OCR3A = 375; //stop
@@ -542,5 +620,32 @@ ISR(ADC_vect){
 } //ISR ADC
 //--------------------------------------------
 
+
+void get_IR_data(){
+    ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+    ADCSRA |= (1<<ADSC); //starts the ADC conversions
+    uart_puts("IR0: ");
+    uart_puts(itoa(IR0_num, "Hello", 10));
+    uart_putc('\n');
+    uart_putc(((char) 13));
+    //_delay_ms(50);	
+
+    ADMUX |= (1<<MUX0); //after clearing this will enable ADC1
+    ADCSRA |= (1<<ADSC); //starts the ADC conversions
+    uart_puts("IR1: ");
+    uart_puts(itoa(IR1_num, "Hello", 10));
+    uart_putc('\n');
+    uart_putc(((char) 13));
+    //_delay_ms(50);	
+
+    ADMUX &= ~ ((1<<MUX0) | (1<<MUX1)); //clearing all bits to set ADC0
+    ADMUX |= (1<<MUX1); //after clearing this will enable ADC1
+    ADCSRA |= (1<<ADSC); //starts the ADC conversions
+    uart_puts("IR2: ");
+    uart_puts(itoa(IR2_num, "Hello", 10));
+    uart_putc('\n');
+    uart_putc(((char) 13));
+    //_delay_ms(50);	
+}
 
 

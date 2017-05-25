@@ -27,6 +27,8 @@
 #define ZMOTOR_L PB1
 #define ZE1 PB2 //encoder
 #define ZE2 PB3
+#define ZE1_PIN 	2 //pinb 2
+#define ZE2_PIN 	3 //pinb 3
 
 //interrupt sensors
 #define TOP_Z PD0
