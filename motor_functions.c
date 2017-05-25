@@ -4,18 +4,26 @@
 #define STEP_PORT PORTA
 #define STEP_INTERVAL 100
 
-void stepper(StepperState *state) {
-  if (state->interval_index >= state->total_intervals) {
+void move_stepper(StepperState *state) {
+  if (!state->movement || state->interval_index >= state->movement->length) {
     return;
   }
 
-  // Set direction and clear the travel pin if set
-  STEP_PORT |= state->direction_mask;
+  // Clear the travel pin to reset pulse state
   STEP_PORT &= ~state->travel_mask;
 
   // If we're at the start of an interval, initialize remaining steps
   if (state->interval_count == 0) {
-    state->steps_remaining = state->step_intervals[state->interval_index];
+    int8_t delta = state->movement->intervals[state->interval_index];
+
+    // Set direction pin, high is clockwise
+    if (delta < 0) {
+      STEP_PORT |= state->direction_mask;
+      state->steps_remaining = -delta;
+    } else {
+      STEP_PORT &= ~state->direction_mask;
+      state->steps_remaining = delta;
+    }
   }
 
   if (state->steps_remaining != 0) {
@@ -45,4 +53,12 @@ void stepper(StepperState *state) {
   } else {
     state->interval_count++;
   }
+}
+
+void reset_stepper_state(StepperState *state, StepperMovement *movement) {
+    state->movement = movement;
+    state->interval_index = 0;
+    state->steps_remaining = 0;
+    state->delay_count = 0;
+    state->interval_count = 0;
 }

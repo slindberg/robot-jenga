@@ -20,15 +20,8 @@
 #include <stdlib.h>
 #include "uart_functions.h"
 #include "motor_functions.h"
+#include "arm_paths.h"
 #include "def.h" //functions with my DEFINES in it
-
-int8_t step_intervals_left[] = {
-5,7,7,10,12,14,18,21,25,28,32,36,39,42,44,48,49,51,52,51,52,52,51,52,51,51,51,51,50,51,50,50,50,50,50,50,49,50,49,49,50,50,50,50,49,50,50,50,50,49,49,50,49,48,49,49,48,48,48,48,47,45,43,41,38,35,32,29,26,22,20,16,13,11,9,7,5,5
-};
-
-int8_t step_intervals_right[] = {
-1,1,2,2,3,3,5,5,7,8,9,11,13,14,15,17,19,19,20,21,21,22,22,23,23,24,24,24,25,25,26,26,26,27,28,28,28,29,30,30,34,38,41,43,46,48,50,53,55,57,59,61,62,65,65,68,68,70,72,72,72,70,69,66,62,58,53,48,44,38,32,28,23,18,15,12,10,8
-};
 
 //--------------------------
 //ADC
@@ -75,13 +68,8 @@ ISR(INT2_vect);
 void rob_init();
 
 //--------------------------
-//stepper controls
-int16_t deltaL = 0; 
-int16_t deltaR = 0; 
-
-//index stuff
-uint16_t right_index = 0; //right 
-uint16_t left_index = 0; //left
+// arm path to execute
+ArmPath *current_arm_path;
 
 
 void tcnt1_init();
@@ -161,15 +149,15 @@ int main(){
    //get_array();
 
 	/*
+  	 current_arm_path = &arm_paths[0]; // entrance path
 	   sol_des_pos += 475/4; 
-	   deltaL += 800 * (96/20);
-	   deltaR += 800 * (72/20);
 	   _delay_ms(5000);  //why the hell is this 5 seconds?
 
 	   PORTF |= (1<<S_TRIG);	
 	   _delay_ms(20);  //why the hell is this 5 seconds?
 	   PORTF &= ~(1<<S_TRIG);	
 
+	current_arm_path = &arm_paths[1]; // exit path
 	sol_des_pos -= 475/4; 
 	_delay_ms(5000); 
 	*/
@@ -308,10 +296,6 @@ void tcnt1_init(void){
 
 } //end tcnt1 init
 
-#define ACCEL_RATE 5 //test it being one for now!
-#define MAX_DAMP 0x40
-#define MIN_DAMP 0x01
-
 ISR(TIMER1_COMPA_vect){ 
     TCNT1 = 0; //change this to CTC mode later
     //^ CTC mode was giving me interrupt and pin errors
@@ -322,27 +306,23 @@ ISR(TIMER1_COMPA_vect){
     static StepperState left_stepper = {
       .travel_mask = 1 << STEP_L,
       .direction_mask = 1 << DIR_L,
-      .step_intervals = step_intervals_left,
-      .total_intervals = sizeof(step_intervals_left),
-      .interval_index = 0,
-      .steps_remaining = 0,
-      .delay_count = 0,
-      .interval_count = 0
     };
 
     static StepperState right_stepper = {
       .travel_mask = 1 << STEP_R,
       .direction_mask = 1 << DIR_R,
-      .step_intervals = step_intervals_right,
-      .total_intervals = sizeof(step_intervals_right),
-      .interval_index = 0,
-      .steps_remaining = 0,
-      .delay_count = 0,
-      .interval_count = 0
     };
 
-    stepper(&left_stepper);
-    stepper(&right_stepper);
+    if (current_arm_path) {
+      reset_stepper_state(&left_stepper, &(current_arm_path->left));
+      reset_stepper_state(&right_stepper, &(current_arm_path->right));
+      current_arm_path = 0;
+    }
+
+    if (left_stepper.movement && right_stepper.movement) {
+      move_stepper(&left_stepper);
+      move_stepper(&right_stepper);
+    }
 }
 
 ISR(TIMER1_COMPB_vect){
