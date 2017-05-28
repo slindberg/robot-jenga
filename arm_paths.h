@@ -2,12 +2,7 @@
 #define _ARM_PATHS_H_
 
 #include <avr/io.h>
-#include "motor_functions.h"
-
-typedef struct ArmPath {
-  StepperMovement left;
-  StepperMovement right;
-} ArmPath;
+#include "arm_control.h"
 
 ArmPath arm_paths[2];
 

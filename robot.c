@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include "uart_functions.h"
 #include "motor_functions.h"
+#include "arm_control.h"
 #include "arm_paths.h"
 #include "def.h" //functions with my DEFINES in it
 
@@ -66,15 +67,10 @@ ISR(INT2_vect);
 void rob_init();
 
 //--------------------------
-// arm path to execute
-ArmPath *current_arm_path;
 
-
+// arm stepper motors
 void tcnt1_init();
 ISR(TIMER1_COMPA_vect);
-ISR(TIMER1_COMPB_vect);
-//there is more in robot_functions.h
-//--------------------------
 
 //for pwm
 void tcnt2_init(); //solinoid motor
@@ -135,9 +131,15 @@ void handle_arm_movement_command() {
   char path_number = uart_getc();
   uint8_t path_index = (path_number - '0') - 1;
 
-  current_arm_path = &arm_paths[path_index];
+  uint8_t result = start_arm_path(&arm_paths[path_index]);
 
-  // TODO: send when movement completes
+  if (!result) {
+    uart_puts("Fail");
+    return;
+  }
+
+  // Wait on arm movement to complete
+  while (!is_arm_path_complete());
   uart_puts("Done");
 }
 
@@ -159,7 +161,11 @@ int main() {
     //-------------------
     //interrupts
     tcnt0_init(); //motor control
-    tcnt1_init(); //steppers
+
+    //steppers
+    tcnt1_init();
+    init_stepper_pins(DIR_L, STEP_L, DIR_R, STEP_R);
+
     tcnt2_init(); //pwm for solinoid motor
     tcnt3_init(); //pwm for catcher
 
@@ -193,7 +199,6 @@ int main() {
 	wait_for_command();
 
 	/*
-	   current_arm_path = &arm_paths[0]; // entrance path
 	   sol_des_pos += 475/4; 
 	   _delay_ms(5000);  //why the hell is this 5 seconds?
 
@@ -201,7 +206,6 @@ int main() {
 	   _delay_ms(20);  //why the hell is this 5 seconds?
 	   PORTF &= ~(1<<S_TRIG);	
 
-	   current_arm_path = &arm_paths[1]; // exit path
 	   sol_des_pos -= 475/4; 
 	   _delay_ms(5000); 
 	   */
@@ -354,37 +358,8 @@ ISR(TIMER1_COMPA_vect){
     TCNT1 = 0; //change this to CTC mode later
     //^ CTC mode was giving me interrupt and pin errors
 
-    //clears the steps so it can pulse
-    PORTA &= ~((1<<STEP_L) | (1<<STEP_R));
-
-    static StepperState left_stepper = {
-	.travel_mask = 1 << STEP_L,
-	.direction_mask = 1 << DIR_L,
-    };
-
-    static StepperState right_stepper = {
-	.travel_mask = 1 << STEP_R,
-	.direction_mask = 1 << DIR_R,
-    };
-
-    if (current_arm_path) {
-	reset_stepper_state(&left_stepper, &(current_arm_path->left));
-	reset_stepper_state(&right_stepper, &(current_arm_path->right));
-	current_arm_path = 0;
-    }
-
-    if (left_stepper.movement && right_stepper.movement) {
-	move_stepper(&left_stepper);
-	move_stepper(&right_stepper);
-    }
+    stepper_timer();
 }
-
-ISR(TIMER1_COMPB_vect){
-    //do nothing for now
-} //comp timer 1
-//end stepper controls
-//-----------------------------------------------------
-
 
 //-----------------------------------------------------
 //pwm

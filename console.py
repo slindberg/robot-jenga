@@ -16,9 +16,6 @@ devices = {
 
 port = serial.Serial(devices[os], baudrate=9600, timeout=3.0)
 
-# port.write("123")
-# print(port.read(10))
-
 while 1:
     try:
         command = sys.stdin.readline()
@@ -33,5 +30,3 @@ while 1:
     port.write(command)
     response = port.read(4)
     print(response)
-
-

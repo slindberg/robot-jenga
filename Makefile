@@ -1,5 +1,5 @@
 PRG            = robot
-OBJ            = $(PRG).o hd44780.o uart_functions.o motor_functions.o arm_paths.o
+OBJ            = $(PRG).o hd44780.o uart_functions.o motor_functions.o arm_control.o arm_paths.o
 MCU_TARGET     = atmega128
 OPTIMIZE       = -O2    # options are 1, 2, 3, s
 DEFS           =
