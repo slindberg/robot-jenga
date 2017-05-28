@@ -2,9 +2,6 @@
 //2017 - 05 - 16
 //Made to keep all the pins organized!
 
-//math shit
-#define COG_FACTOR (96/72) //multiply this one last
-
 //ADC
 #define IR0 PF0
 #define IR1 PF1
