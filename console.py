@@ -5,7 +5,7 @@ import platform
 import serial
 
 #subprocess.Popen("sudo chmod 777 ")
-# print "sudo chmod 777 /dev/ttyUSB0", sys.argv[0]
+print "sudo chmod 777 /dev/ttyUSB0", sys.argv[0]
 
 os = platform.system()
 
@@ -28,5 +28,5 @@ while 1:
     command = command.rstrip()
     
     port.write(command)
-    response = port.read(4)
+    response = port.read(15)
     print(response)
