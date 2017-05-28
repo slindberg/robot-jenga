@@ -82,31 +82,76 @@ void tcnt3_init(); //for catcher motor
 
 void get_IR_data();
 
-void get_array(){
-    uint8_t i = 0;
-    uint8_t temp = 0;
-    char c = '0';
-    char str[3];
-
-    for(i = 0; i < 3; i++){
-	c = uart_getc();
-	str[i] = c;
-    }
-
-    temp = atoi(str);
-    temp++;	
-
-    uart_puts(itoa(temp, "", 10));
-}
 //PID
     PID z_pid;
 //END PID
 
-    int main(){
+void handle_heartbeat_command();
+void handle_arm_movement_command();
+void handle_fire_solenoid_command();
+
+void wait_for_command() {
+  char command = uart_getc();
+
+  switch (command) {
+    // heartbeat
+    case 'P':
+    case 'p':
+      handle_heartbeat_command();
+      break;
+
+    // arm movement
+    case 'A':
+    case 'a':
+      handle_arm_movement_command();
+      uart_puts("Done");
+      break;
+
+    // rotate end effector
+    case 'R':
+    case 'r':
+      uart_putc('R');
+      break;
+
+    // z-axis movement
+    case 'Z':
+    case 'z':
+      uart_putc('Z');
+      break;
+
+    // fire solenoid
+    case 'F':
+    case 'f':
+      handle_fire_solenoid_command();
+      break;
+  }
+}
+
+void handle_heartbeat_command() {
+  uart_putc('.');
+}
+
+void handle_arm_movement_command() {
+  char path_number = uart_getc();
+  uint8_t path_index = (path_number - '0') - 1;
+
+  current_arm_path = &arm_paths[path_index];
+
+  // TODO: send when movement completes
+  uart_puts("Done");
+}
+
+void handle_fire_solenoid_command() {
+  PORTF |= (1<<S_TRIG);
+  _delay_ms(20);
+  PORTF &= ~(1<<S_TRIG);
+  uart_puts("Done");
+}
+
+int main() {
 
     //figure out real min and max for pwm
     pid_init(&z_pid, 100, 2000);
-
 
     //setting up pins
     rob_init();
@@ -135,17 +180,17 @@ void get_array(){
 	//debug
 
 
-	uart_puts(itoa(zduty, "", 10));
-	uart_putc(10); //linefeed
-	uart_putc(13); //carrage return
-	_delay_ms(100); 
+	// uart_puts(itoa(zduty, "", 10));
+	// uart_putc(10); //linefeed
+	// uart_putc(13); //carrage return
+	// _delay_ms(100); 
 
 	//z_des_pos += 100;
 	//_delay_ms(1000); 
 	//z_des_pos -= 100;
 	//_delay_ms(1000); 
 
-	//get_array();
+	wait_for_command();
 
 	/*
 	   current_arm_path = &arm_paths[0]; // entrance path
