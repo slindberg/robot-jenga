@@ -16,6 +16,14 @@ int8_t exit_movement_right[] = {
 4,5,5,6,7,8,9,11,12,14,16,17,19,21,23,25,26,28,30,31,32,34,35,36,36,37,37,37,37,37,36,36,35,35,34,33,33,33,31,31,31,29,29,29,27,27,26,25,24,23,22,22,20,19,19,18,17,18,17,17,16,17,16,16,16,15,16,15,15,14,15,14,14,14,14,13,13,13,13,12,12,12,12,11,11,11,11,10,10,9,9,8,8,7,6,6,4,5,3,3,2,1,1,0,0,-1,-1,-1,-1,-2,-1,-1,-2,-1,-1,-1,-2
 };
 
+int8_t reset_movement_left[] = {
+8,8,8,6,5,5,4,3,3,2,2,2
+};
+
+int8_t reset_movement_right[] = {
+5,5,5,4,4,4,3,3,3,2,2,2
+};
+
 ArmPath arm_paths[] = {
   {
     .left = {
@@ -35,6 +43,16 @@ ArmPath arm_paths[] = {
     .right = {
       .intervals = exit_movement_right,
       .length = sizeof(exit_movement_right),
+    }
+  },
+  {
+    .left = {
+      .intervals = reset_movement_left,
+      .length = sizeof(reset_movement_left),
+    },
+    .right = {
+      .intervals = reset_movement_right,
+      .length = sizeof(reset_movement_right),
     }
   }
 };

@@ -4,6 +4,6 @@
 #include <avr/io.h>
 #include "arm_control.h"
 
-ArmPath arm_paths[2];
+ArmPath arm_paths[3];
 
 #endif // _ARM_PATHS_H_
