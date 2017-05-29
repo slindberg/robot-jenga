@@ -76,6 +76,7 @@ void get_IR_data();
 
 void handle_heartbeat_command();
 void handle_arm_movement_command();
+void handle_zaxis_home_command();
 void handle_fire_solenoid_command();
 
 void wait_for_command() {
@@ -101,16 +102,22 @@ void wait_for_command() {
       uart_putc('R');
       break;
 
+    case 'H':
+    case 'h':
+      handle_zaxis_home_command();
+      break;
+
       // z-axis movement
     case 'Z':
     case 'z':
-      move_zaxis(-40000); 
-      uart_puts(itoa(OCR3B, "",10));
+      move_zaxis(-3675);
+      uart_puts("Done");
       break;
+
     case 'X':
     case 'x':
-      move_zaxis(40000); 
-      uart_puts(itoa(OCR3B, "",10));
+      move_zaxis(3675);
+      uart_puts("Done");
       break;
 
       // fire solenoid
@@ -138,6 +145,12 @@ void handle_arm_movement_command() {
 
   // Wait on arm movement to complete
   while (!is_arm_path_complete());
+  uart_puts("Done");
+}
+
+void handle_zaxis_home_command() {
+  // Just use a
+  home_zaxis();
   uart_puts("Done");
 }
 

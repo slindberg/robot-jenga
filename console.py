@@ -29,5 +29,5 @@ while 1:
     command = command.rstrip()
     
     port.write(command)
-    response = port.read(15)
+    response = port.read(4)
     print(response)

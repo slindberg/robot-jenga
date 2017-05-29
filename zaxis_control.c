@@ -56,7 +56,16 @@ uint16_t process_zaxis(){
   return zduty;
 }
 
-void move_zaxis(int32_t des_pos){
+void home_zaxis() {
+  move_zaxis_absolute(INT32_MIN);
+  z_position = 0;
+}
+
+void move_zaxis(int32_t delta){
+  move_zaxis_absolute(z_position + delta);
+}
+
+void move_zaxis_absolute(int32_t des_pos){
   if( !((zbreak_dir == 1) && (z_position < des_pos)) && 
       !((zbreak_dir == -1) && (z_position > des_pos)) ){  
     z_des_pos = des_pos;
