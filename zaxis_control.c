@@ -40,19 +40,6 @@ uint16_t process_zaxis(){
     }
   }
 
-  //debug
-  if(zbreak_dir == -1){
-    PORTB &= ~(1<<5);
-    PORTB |= (1<<6);
-  } else if(zbreak_dir == 1){
-    PORTB |= (1<<5);
-    PORTB &= ~(1<<6);
-  } else {
-    PORTB |= (1<<5);
-    PORTB |= (1<<6);
-  }
-  //end debug
-
   return zduty;
 }
 

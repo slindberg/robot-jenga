@@ -1,22 +1,10 @@
-/* Ernie Bodle - 2017 - 05 - 11
+/* Ernie Bodle & Steven Lindberg  
+ * Started on 2017 - 05 - 11
  * robot.c
  * This lab uses a modified version of my lab4 ECE473 code.
  *
- * This is for my ROB 421 project
+ * For ROB 421 project
  * Jenga Robot
- */
-
-/* ERNIE
- * Should I move stepper motor stuff into tcnt2 and make tcnt1
- * into pwm? Only do this if tcnt3 isn't very good.
- * (Or even make tcnt2 the servo pwm contorller and tcnt3 into
- * my motor pwms)
- */
-
-/*HAVE THE FIRST ITERATION DO:
- * Make the arm/catcher go out to a position and then retract
- * Make it shoot
- * And reel everything up
  */
 
 #include <stdio.h>
@@ -65,12 +53,12 @@ void rob_init();
 //--------------------------
 
 // arm stepper motors
-void tcnt1_init();
+void tcnt2_init(); //steppers
 ISR(TIMER1_COMPA_vect);
 
 //for pwm
-void tcnt2_init(); //servo pwm
-void tcnt3_init(); //dc motors
+void tcnt1_init(); //dc motor pwm
+void tcnt3_init(); //servo pwm
 
 void get_IR_data();
 
@@ -171,13 +159,13 @@ int main() {
   tcnt0_init(); //DC motor control
 
   //steppers
-  tcnt1_init(); //steppers
+  tcnt2_init(); //stepper motors
   init_stepper_pins(DIR_L, STEP_L, DIR_R, STEP_R);
 
-  // tcnt2_init(); //pwm for servo motor
-  tcnt3_init(); //pwm for catcher and DC motors
+  tcnt1_init(); //DC motor pwm
+  tcnt3_init(); //Servo motor pwm
 
-  //adc_init();
+  //adc_init(); //we only need this if we are using IR sensors
   uart_init(); //uart
   sei(); //enable all interrupts before entering loop
   //-------------------
@@ -201,26 +189,12 @@ int main() {
 
 
     //1. wait for on signal
-    //i = 0;
-    //while(i == 0){
-    //if(check pin here){
-    //
-    //} //end if
-    //} //end while
-
 
     //2a. let catcher down
-
-    //pwm
-    //make the cater motor loose
-    //OCR0 = 0x00?
 
     //2b. extend arm out
 
     //figure out where to go
-    //deltaR = ?;
-    //deltaL = ?;
-    //deltaZ = ?;
 
     //while(invalid block){
     //3. move to the desired row and position
@@ -234,17 +208,9 @@ int main() {
 
     //7. shoot! and save the data that it hit the block
 
-    //PORTF |= (1<<S_TRIG); //on
-    //_delay_ms(1ms);
-    //PORTF &= ~(1<<S_TRIG); //off
-
     //8. reel everything back up
-    //turn pwm back on
-    //
 
     //9. send done signal
-    //PORT
-
 
   } //end while
 
@@ -252,7 +218,6 @@ int main() {
 } //end main
 
 void rob_init(){
-
   //A
   DDRA |=  (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R);
   //PORTA will be 0 initally
@@ -260,8 +225,8 @@ void rob_init(){
   //B
   DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) |
     (0<<ZE1) | (0<<ZE2) | (1<<CATCHER);
-  DDRB |= (1<<PB7) | (1<<PB6) | (1<<PB5);
-  //^ 7 is pwm, 6 is debug
+  //5, 6, 7 are PWM for DC motors
+  DDRB |= (1<<PB5) | (1<<PB6) | (1<<PB7);
   PORTB |= (1<<ZE1) | (1<<ZE2);
 
   //D
@@ -317,34 +282,36 @@ ISR(INT2_vect){
 //--------------------------------------------------
 //stepper controls
 void tcnt1_init(void){
-  //clk/256
-  TCCR1A = 0x00;
-  TCCR1B |= (1<<CS11) | (1<<CS10); //clk/64
-  TCCR1C = 0x00;
 
-  //these don't actually change at differnt rates...
-  //right stepper
-  TIMSK |= (1<<OCIE1A); //output compair match
-  OCR1A |= 0x40; //64
+  //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
+  //clear when (OCR3A == TCNT3), set on compare match
+  TCCR1A |= (1<<WGM11) | (1<<COM1C1) | (1<<COM1B1);
+  TCCR1B |= (1<<WGM13) | (1<<WGM12);
+  //no prescaling
+  TCCR1B |=  (1<<CS10);
+  //For scaling
+  ICR1 = 5000; //Top
+
+  //for sol motor (impliment later)
+  OCR1C = 250; //spool
+
+  //pwm for z motor
+  OCR1B = 2500; //min
 } //end tcnt1 init
 
-ISR(TIMER1_COMPA_vect){
-  TCNT1 = 0; //change this to CTC mode later
-  //^ CTC mode was giving me interrupt and pin errors
-  stepper_timer();
+//-----------------------------------------------------
+//stepper motor functions
+void tcnt2_init(void){
+  TCCR2 |= (1<<CS21) | (1<<CS20); //clk/64 mode
+  TIMSK |= (1<<OCIE2);
+  OCR2 = 0x40; //64
+
 }
 
-//-----------------------------------------------------
-//pwm for servo
-void tcnt2_init(void){
-
- //have this set to 50Hz
-
-  //enable timer/counter compare interrupt2
-  TCCR2 |= (1<<WGM20) | (1<<WGM21) | (1<<COM21) |
-    (1<<COM20) | (1<<CS21) | (1<<CS20);
-  //I should probably set a top somewhere
-  OCR2 = 185; //slowest for sol_motor
+ISR(TIMER2_COMP_vect){
+  TCNT2 = 0; //change this to CTC mode later
+  //^ CTC mode was giving me interrupt and pin errors
+  stepper_timer();
 }
 //-----------------------------------------------------
 
@@ -356,9 +323,8 @@ void tcnt0_init(void){
   TIMSK |= (1<<TOIE0);
 } //end tcnt_init
 
-//ERNIE change this to compare vector?
 ISR(TIMER0_OVF_vect){
-  OCR3B = process_zaxis();
+  OCR1B = process_zaxis();
 
   //solinoid motor
   if(sol_des_pos == sol_position){
@@ -370,7 +336,6 @@ ISR(TIMER0_OVF_vect){
   if(sol_des_pos < sol_position){
     solinoid_ccw();
   }
-
 } //end timer0 ISR
 //end motor stuff
 //---------------------------------------------------------------------
@@ -383,9 +348,7 @@ void tcnt3_init(){
   TCCR3A |= (1<<WGM31) | (1<<COM3A1) | (1<<COM3B1);
   TCCR3B |= (1<<WGM33) | (1<<WGM32);
 
-  //1/64 scaler
-  //TCCR3B |=  (1<<CS31) | (1<<CS30);
-  TCCR3B |=  (1<<CS30); // | (1<<CS30);
+  TCCR3B |=  (1<<CS31) | (1<<CS30); //1/64
 
   //For scaling
   ICR3 = 5000; //Top
