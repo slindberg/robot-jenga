@@ -1,15 +1,15 @@
 /* Ernie Bodle - 2017 - 05 - 11
- * robot.c 
+ * robot.c
  * This lab uses a modified version of my lab4 ECE473 code.
- * 
+ *
  * This is for my ROB 421 project
- * Jenga Robot 
- */ 
+ * Jenga Robot
+ */
 
 /* ERNIE
- * Should I move stepper motor stuff into tcnt2 and make tcnt1 
+ * Should I move stepper motor stuff into tcnt2 and make tcnt1
  * into pwm? Only do this if tcnt3 isn't very good.
- * (Or even make tcnt2 the servo pwm contorller and tcnt3 into 
+ * (Or even make tcnt2 the servo pwm contorller and tcnt3 into
  * my motor pwms)
  */
 
@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <util/delay.h> 
+#include <util/delay.h>
 #include <math.h>
 #include <stdlib.h>
 #include "uart_functions.h"
@@ -179,7 +179,7 @@ int main() {
   tcnt1_init(); //steppers
   init_stepper_pins(DIR_L, STEP_L, DIR_R, STEP_R);
 
-  tcnt2_init(); //pwm for servo motor
+  // tcnt2_init(); //pwm for servo motor
   tcnt3_init(); //pwm for catcher and DC motors
 
   //adc_init();
@@ -200,7 +200,7 @@ int main() {
     //uart_puts(itoa(zduty, "", 10));
     //uart_putc(10); //linefeed
     // uart_putc(13); //carrage return
-    //_delay_ms(100); 
+    //_delay_ms(100);
 
     wait_for_command();
 
@@ -263,20 +263,20 @@ void rob_init(){
   //PORTA will be 0 initally
 
   //B
-  DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) | 
+  DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) |
     (0<<ZE1) | (0<<ZE2) | (1<<CATCHER);
   DDRB |= (1<<PB7) | (1<<PB6) | (1<<PB5);
   //^ 7 is pwm, 6 is debug
   PORTB |= (1<<ZE1) | (1<<ZE2);
 
   //D
-  //DDRD |= (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R) 
+  //DDRD |= (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R)
   //^ changed to A due to tc problems
   DDRD |= (0<<TOP_Z) | (0<<BOT_Z) | (0<<CATCHER_SENSE);
   PORTD |= (1<<TOP_Z) | (1<<BOT_Z) | (1<<CATCHER_SENSE);
 
   //E
-  DDRE |= (0<<TRANS) | (1<<RECEV) | 
+  DDRE |= (0<<TRANS) | (1<<RECEV) |
     (0<<START_SIG) | (1<<END_SIG) | (0<<ORTHO);
   DDRE |= (1<<3) | (1<<4) | (1<<5); //pwm
   PORTE |= (1<<TRANS) | (1<<ORTHO) | (1<<START_SIG);
@@ -316,24 +316,24 @@ ISR(INT2_vect){
   } else {
     sol_dir = 1;
     sol_position++;
-  } 
+  }
 }
 
 //--------------------------------------------------
 //stepper controls
 void tcnt1_init(void){
   //clk/256
-  TCCR1A = 0x00; 
+  TCCR1A = 0x00;
   TCCR1B |= (1<<CS11) | (1<<CS10); //clk/64
   TCCR1C = 0x00;
 
   //these don't actually change at differnt rates...
   //right stepper
   TIMSK |= (1<<OCIE1A); //output compair match
-  OCR1A |= 0x40; //64 
+  OCR1A |= 0x40; //64
 } //end tcnt1 init
 
-ISR(TIMER1_COMPA_vect){ 
+ISR(TIMER1_COMPA_vect){
   TCNT1 = 0; //change this to CTC mode later
   //^ CTC mode was giving me interrupt and pin errors
   stepper_timer();
@@ -342,13 +342,13 @@ ISR(TIMER1_COMPA_vect){
 //-----------------------------------------------------
 //pwm for servo
 void tcnt2_init(void){
- 
+
  //have this set to 50Hz
-  
-  //enable timer/counter compare interrupt2 
-  TCCR2 |= (1<<WGM20) | (1<<WGM21) | (1<<COM21) | 
+
+  //enable timer/counter compare interrupt2
+  TCCR2 |= (1<<WGM20) | (1<<WGM21) | (1<<COM21) |
     (1<<COM20) | (1<<CS21) | (1<<CS20);
-  //I should probably set a top somewhere  
+  //I should probably set a top somewhere
   OCR2 = 185; //slowest for sol_motor
 }
 //-----------------------------------------------------
@@ -367,8 +367,8 @@ ISR(TIMER0_OVF_vect){
 
   //solinoid motor
   if(sol_des_pos == sol_position){
-    solinoid_halt();   
-  } 
+    solinoid_halt();
+  }
   if(sol_des_pos > sol_position ){
     solinoid_cw(); //make sure this is actually cw
   }
@@ -384,15 +384,15 @@ ISR(TIMER0_OVF_vect){
 //Catcher motor pwm
 void tcnt3_init(){
   //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
-  //clear when (OCR3A == TCNT3), set on compare match 
+  //clear when (OCR3A == TCNT3), set on compare match
   TCCR3A |= (1<<WGM31) | (1<<COM3A1) | (1<<COM3B1);
-  TCCR3B |= (1<<WGM33) | (1<<WGM32); 
+  TCCR3B |= (1<<WGM33) | (1<<WGM32);
 
   //1/64 scaler
-  //TCCR3B |=  (1<<CS31) | (1<<CS30);  
-  TCCR3B |=  (1<<CS31); // | (1<<CS30);  
+  //TCCR3B |=  (1<<CS31) | (1<<CS30);
+  TCCR3B |=  (1<<CS31); // | (1<<CS30);
 
-  //For scaling 
+  //For scaling
   ICR3 = 5000; //Top
 
   //pwm for z motor
@@ -418,7 +418,7 @@ void adc_init(){
   //ADMUX |= (1<<MUX1); //after clearing this will enable ADC2
 
   //enables adc and interrupt
-  ADCSRA |= (1<<ADEN) | (1<<ADIE); 
+  ADCSRA |= (1<<ADEN) | (1<<ADIE);
   //scales it down by 128 (idk what clock it uses)
   ADCSRA |= (1<<ADPS2) | (1<<ADPS1) | (1<<ADPS0);
 } //end adc init
