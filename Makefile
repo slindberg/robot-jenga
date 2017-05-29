@@ -1,5 +1,5 @@
 PRG            = robot
-OBJ            = $(PRG).o uart_functions.o motor_functions.o arm_control.o arm_paths.o zaxis_control.o
+OBJ            = $(PRG).o uart_functions.o motor_functions.o arm_control.o arm_paths.o zaxis_control.o pid.o
 MCU_TARGET     = atmega128
 OPTIMIZE       = -O2    # options are 1, 2, 3, s
 DEFS           =
@@ -21,12 +21,12 @@ all: $(PRG).elf lst text eeprom
 $(PRG).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 
-clean: 
-	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak 
+clean:
+	rm -rf *.o $(PRG).elf *.eps *.png *.pdf *.bak
 	rm -rf *.bin *.hex *.srec *.lst *.map $(EXTRA_CLEAN_FILES) *~
 
 program: $(PRG).hex
-	avrdude -p m128 -c usbasp -e -U flash:w:$(PRG).hex 
+	avrdude -p m128 -c usbasp -e -U flash:w:$(PRG).hex
 
 lst:  $(PRG).lst
 

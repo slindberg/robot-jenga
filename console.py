@@ -27,7 +27,7 @@ while 1:
         break
 
     command = command.rstrip()
-    
+
     port.write(command)
     response = port.read(4)
     print(response)

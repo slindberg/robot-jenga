@@ -107,13 +107,14 @@ void wait_for_command() {
       handle_zaxis_home_command();
       break;
 
-      // z-axis movement
+      // z-axis down one block
     case 'Z':
     case 'z':
       move_zaxis(-3675);
       uart_puts("Done");
       break;
 
+      // z-axis up one block
     case 'X':
     case 'x':
       move_zaxis(3675);
@@ -162,12 +163,6 @@ void handle_fire_solenoid_command() {
 }
 
 int main() {
-
-  //figure out real min and max for pwm
-  //max 5000; //Top of icr3
-  //min 2500
-  zpid_init();
-
   //setting up pins
   rob_init();
 
@@ -197,10 +192,10 @@ int main() {
 
     //-----------------------------------------
     //debug
-    //uart_puts(itoa(zduty, "", 10));
-    //uart_putc(10); //linefeed
+    // uart_puts(itoa(OCR3B, "",10));
+    // uart_putc(10); //linefeed
     // uart_putc(13); //carrage return
-    //_delay_ms(100);
+    // _delay_ms(100);
 
     wait_for_command();
 
@@ -390,7 +385,7 @@ void tcnt3_init(){
 
   //1/64 scaler
   //TCCR3B |=  (1<<CS31) | (1<<CS30);
-  TCCR3B |=  (1<<CS31); // | (1<<CS30);
+  TCCR3B |=  (1<<CS30); // | (1<<CS30);
 
   //For scaling
   ICR3 = 5000; //Top
