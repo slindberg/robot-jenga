@@ -5,3 +5,6 @@
 *.bin
 *.lst
 *.srec
+
+*.pyc
+*.csv
