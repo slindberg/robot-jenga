@@ -3,24 +3,16 @@
 PID z_pid;
 int32_t z_des_pos = 0; //where to go
 int32_t z_position = 0; //reference z_position
-int8_t z_dir = 0;
+int8_t z_dir = 0; //1 down, -1 is up, 0 is undefined
+uint8_t run_zmotor = 0; //enables the motor to run or nah
+//break_dir keeps track of which limit switch it hit
+int8_t zbreak_dir = 0; //1 down, -1 up, 0 undefined
 
 //gets called with timer0
 uint16_t process_zaxis(){
   static uint8_t count = 0;
   static int32_t last_z_pos = 0;
   static uint16_t zduty = 0;
-
-  //zmotor
-  if(z_des_pos == z_position){
-    z_halt();   
-  } 
-  if(z_des_pos > (z_position)){
-    z_up();
-  }
-  if(z_des_pos < (z_position)){
-    z_down();
-  }
 
   //ERNIE Get PID contorl to work!!!
   //make sure all the equations are good!!!
@@ -35,43 +27,76 @@ uint16_t process_zaxis(){
   }
   count++;
 
+  if(run_zmotor == 1){
+    //zbreak_dir = 0; //reset to 0
+    if(z_des_pos == z_position){
+      z_halt();   
+    } 
+    if(z_des_pos > (z_position)){
+      z_up();
+    }
+    if(z_des_pos < (z_position)){
+      z_down();
+    }
+  }
+
+  //debug
+  if(zbreak_dir == -1){
+    PORTB &= ~(1<<5);
+    PORTB |= (1<<6);
+  } else if(zbreak_dir == 1){
+    PORTB |= (1<<5);
+    PORTB &= ~(1<<6);
+  } else {
+    PORTB |= (1<<5);
+    PORTB |= (1<<6);
+  }
+  //end debug
+
   return zduty;
 }
 
 void move_zaxis(int32_t des_pos){
-  z_des_pos = des_pos;
+  if( !((zbreak_dir == 1) && (z_position < des_pos)) && 
+      !((zbreak_dir == -1) && (z_position > des_pos)) ){  
+    z_des_pos = des_pos;
+    run_zmotor = 1;
+    zbreak_dir = 0;
+  }
 }
 
 void z_down(){
-  z_halt(); 
   PORTB |= (1<<ZMOTOR_R); //PB0
   PORTB &= ~(1<<ZMOTOR_L); //PB1
 }
 
 void z_up(){
-  z_halt(); 
   PORTB &= ~(1<<ZMOTOR_R); //PB0
   PORTB |= (1<<ZMOTOR_L);  //PB1
 }
 
 void z_halt(){
   PORTB &= ~((1<<ZMOTOR_R) | (1<<ZMOTOR_L));
+  run_zmotor = 0;
 }
 
 void zaxis_limit_switch(){
-  //ERNIE make this actually stop and go up/down
-  //a little when triggered
 
-  //if(z_dir somethign something 
+  if(z_des_pos > z_position){
+    zbreak_dir = 1;
+  } else {
+    zbreak_dir = -1;
+  }
   z_des_pos = z_position;
+
 }
 
 void zaxis_encoder(){
   if(bit_is_set(PINB,ZE2_PIN)){
-    z_dir = -1;
+    z_dir = -1; //down
     z_position--;	    
   } else {
-    z_dir = 1;
+    z_dir = 1; //up
     z_position++;	
   } 
 }
@@ -87,8 +112,7 @@ void zpid_init(){
 //I hopw floats work
 uint16_t pid_update(PID* pid, float set_point, float proccess_var){
 
-  return 4000;
-
+  return 4900;
 
   float prev_error; //error
   float manp; //manupulate (sp) value?

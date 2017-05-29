@@ -74,7 +74,6 @@ void tcnt3_init(); //dc motors
 
 void get_IR_data();
 
-
 void handle_heartbeat_command();
 void handle_arm_movement_command();
 void handle_fire_solenoid_command();
@@ -105,7 +104,12 @@ void wait_for_command() {
       // z-axis movement
     case 'Z':
     case 'z':
-      move_zaxis(22000); 
+      move_zaxis(-40000); 
+      uart_puts(itoa(OCR3B, "",10));
+      break;
+    case 'X':
+    case 'x':
+      move_zaxis(40000); 
       uart_puts(itoa(OCR3B, "",10));
       break;
 
@@ -247,13 +251,14 @@ void rob_init(){
 
   //B
   DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) | 
-    (0<<ZE1) | (0<<ZE2) | (1<<CATCHER) | (1<<PB7) | (1<<PB6);
+    (0<<ZE1) | (0<<ZE2) | (1<<CATCHER);
+  DDRB |= (1<<PB7) | (1<<PB6) | (1<<PB5);
   //^ 7 is pwm, 6 is debug
-  //DDRB |= (1<<0) | (1<<1); //debug
   PORTB |= (1<<ZE1) | (1<<ZE2);
 
   //D
-  //DDRD |= (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R)
+  //DDRD |= (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R) 
+  //^ changed to A due to tc problems
   DDRD |= (0<<TOP_Z) | (0<<BOT_Z) | (0<<CATCHER_SENSE);
   PORTD |= (1<<TOP_Z) | (1<<BOT_Z) | (1<<CATCHER_SENSE);
 
@@ -269,7 +274,7 @@ void rob_init(){
   PORTF |= (0<<IR0) | (0<<IR1) | (0<<IR2) | (1<<SE1) | (1<<SE2);
 
   //enable interrupts for INTx rising edge
-  EICRA |= ( (1<<ISC01) | (1<<ISC01) );
+  EICRA |= ( (1<<ISC01) | (1<<ISC00) );
   EICRA |= ( (1<<ISC11) | (0<<ISC10) ); //falling edge
   EICRA |= ( (1<<ISC21) | (1<<ISC20) );
 
@@ -301,7 +306,6 @@ ISR(INT2_vect){
   } 
 }
 
-
 //--------------------------------------------------
 //stepper controls
 void tcnt1_init(void){
@@ -327,16 +331,12 @@ ISR(TIMER1_COMPA_vect){
 void tcnt2_init(void){
  
  //have this set to 50Hz
-
-  
   
   //enable timer/counter compare interrupt2 
-  //TCCR2 |= (1<<WGM20) | (1<<WGM21) | (1<<COM21) | 
-   // (1<<COM20) | (1<<CS21) | (1<<CS20);
+  TCCR2 |= (1<<WGM20) | (1<<WGM21) | (1<<COM21) | 
+    (1<<COM20) | (1<<CS21) | (1<<CS20);
   //I should probably set a top somewhere  
-  //OCR2 = 185; //slowest for sol_motor
-
-
+  OCR2 = 185; //slowest for sol_motor
 }
 //-----------------------------------------------------
 
@@ -376,7 +376,8 @@ void tcnt3_init(){
   TCCR3B |= (1<<WGM33) | (1<<WGM32); 
 
   //1/64 scaler
-  TCCR3B |=  (1<<CS31) | (1<<CS30);  
+  //TCCR3B |=  (1<<CS31) | (1<<CS30);  
+  TCCR3B |=  (1<<CS31); // | (1<<CS30);  
 
   //For scaling 
   ICR3 = 5000; //Top
