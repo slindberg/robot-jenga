@@ -24,7 +24,7 @@ int8_t reset_movement_right[] = {
 5,5,5,4,4,4,3,3,3,2,2,2
 };
 
-ArmPath arm_paths[] = {
+arm_path_t arm_paths[] = {
   {
     .left = {
       .intervals = enter_movement_left,

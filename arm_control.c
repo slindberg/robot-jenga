@@ -1,17 +1,17 @@
 #include "arm_control.h"
 
-ArmPath *current_arm_path = 0;
-StepperState left_stepper_state = {
+arm_path_t *current_arm_path = 0;
+stepper_state_t left_stepper_state = {
   .travel_mask = 1 << STEP_L,
   .direction_mask = 1 << DIR_L
 };
-StepperState right_stepper_state = {
+stepper_state_t right_stepper_state = {
   .travel_mask = 1 << STEP_R,
   .direction_mask = 1 << DIR_R
 };
 
 // Begin an arm path
-uint8_t start_arm_path(ArmPath *arm_path) {
+uint8_t start_arm_path(arm_path_t *arm_path) {
   // Ignore any new arm path until the current one completes
   if (arm_path && !current_arm_path) {
     current_arm_path = arm_path;
@@ -30,7 +30,7 @@ uint8_t is_arm_path_complete() {
 }
 
 // Initialize a stepper to begin a movement
-void init_stepper_state(StepperState *state, StepperMovement *movement) {
+void init_stepper_state(stepper_state_t *state, stepper_movement_t *movement) {
   state->movement = movement;
   state->interval_index = 0;
   state->steps_remaining = 0;
@@ -39,7 +39,7 @@ void init_stepper_state(StepperState *state, StepperMovement *movement) {
 }
 
 // To be called on a timer interrupt to control stepper movement
-void stepper_timer(ArmPath *arm_path) {
+void stepper_timer(arm_path_t *arm_path) {
   if (current_arm_path) {
     move_stepper(&right_stepper_state);
     move_stepper(&left_stepper_state);
@@ -52,7 +52,7 @@ void stepper_timer(ArmPath *arm_path) {
 }
 
 // Pulse a single stepper based on it's current state
-void move_stepper(StepperState *state) {
+void move_stepper(stepper_state_t *state) {
   // If the path is complete, clear the movement pointer to signal completion
   if (state->movement && state->interval_index >= state->movement->length) {
     state->movement = 0;
