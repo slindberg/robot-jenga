@@ -1,4 +1,4 @@
-/* Ernie Bodle & Steven Lindberg  
+/* Ernie Bodle & Steven Lindberg
  * Started on 2017 - 05 - 11
  * robot.c
  * This lab uses a modified version of my lab4 ECE473 code.
@@ -14,10 +14,10 @@
 #include <math.h>
 #include <stdlib.h>
 #include "uart_functions.h"
-#include "motor_functions.h"
 #include "arm_control.h"
 #include "arm_paths.h"
 #include "zaxis_control.h"
+#include "ef_rotation_control.h"
 #include "def.h" //functions with my DEFINES in it
 
 //--------------------------
@@ -30,14 +30,6 @@ void adc_init();
 ISR(ADC_vect);
 //--------------------------
 
-
-//--------------------------
-//solinoid and z motor
-int16_t sol_position = 0; //reference sol_position
-int16_t sol_des_pos = 0; //where to go
-int8_t sol_dir = 0;
-
-//int16_t zduty = 0;
 
 void tcnt0_init(void);
 ISR(TIMER0_OVF_vect);
@@ -109,6 +101,18 @@ void wait_for_command() {
       uart_puts("Done");
       break;
 
+    case 'W':
+    case 'w':
+      rotate_ef(-50);
+      uart_puts("Done");
+      break;
+
+    case 'C':
+    case 'c':
+      rotate_ef(50);
+      uart_puts("Done");
+      break;
+
       // fire solenoid
     case 'F':
     case 'f':
@@ -170,6 +174,10 @@ int main() {
   sei(); //enable all interrupts before entering loop
   //-------------------
 
+  // PID control initilization
+  init_zaxis_pid();
+  init_ef_pid();
+
   //start of jenga protocol
 
   //check for orthagonality here
@@ -180,13 +188,18 @@ int main() {
 
     //-----------------------------------------
     //debug
-    // uart_puts(itoa(OCR3B, "",10));
+    // int32_t value1 = (int32_t)get_zaxis_position();
+    // uart_puts(itoa(value1, "",10));
+    // uart_putc(32); //space
+    // int32_t value2 = (int32_t)get_zaxis_set_point();
+    // uart_puts(itoa(value2, "",10));
+    // uart_putc(32); //space
+    // uart_puts(itoa(OCR1B, "",10));
     // uart_putc(10); //linefeed
     // uart_putc(13); //carrage return
-    // _delay_ms(100);
+    // _delay_ms(10);
 
     wait_for_command();
-
 
     //1. wait for on signal
 
@@ -249,7 +262,7 @@ void rob_init(){
   //enable interrupts for INTx rising edge
   EICRA |= ( (1<<ISC01) | (1<<ISC00) );
   EICRA |= ( (1<<ISC11) | (0<<ISC10) ); //falling edge
-  EICRA |= ( (1<<ISC21) | (1<<ISC20) );
+  EICRA |= ( (1<<ISC21) | (0<<ISC20) );
 
   //enable interrupts
   EIMSK |= (1<<INT0) | (1<<INT1) | (1<<INT2);
@@ -269,20 +282,11 @@ ISR(INT1_vect){
 //ERNIE - There is a problem with this! It can only go up one way
 //may be hardware
 ISR(INT2_vect){
-  //PD2
-  if(bit_is_set(PINF,SE2_PIN)){
-    sol_dir = -1;
-    sol_position--;
-  } else {
-    sol_dir = 1;
-    sol_position++;
-  }
+  ef_rotation_encoder();
 }
 
 //--------------------------------------------------
-//stepper controls
 void tcnt1_init(void){
-
   //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
   //clear when (OCR3A == TCNT3), set on compare match
   TCCR1A |= (1<<WGM11) | (1<<COM1C1) | (1<<COM1B1);
@@ -292,11 +296,11 @@ void tcnt1_init(void){
   //For scaling
   ICR1 = 5000; //Top
 
-  //for sol motor (impliment later)
-  OCR1C = 250; //spool
+  //pwm for ef motor
+  OCR1C = 0;
 
   //pwm for z motor
-  OCR1B = 2500; //min
+  OCR1B = 0;
 } //end tcnt1 init
 
 //-----------------------------------------------------
@@ -305,7 +309,6 @@ void tcnt2_init(void){
   TCCR2 |= (1<<CS21) | (1<<CS20); //clk/64 mode
   TIMSK |= (1<<OCIE2);
   OCR2 = 0x40; //64
-
 }
 
 ISR(TIMER2_COMP_vect){
@@ -325,17 +328,7 @@ void tcnt0_init(void){
 
 ISR(TIMER0_OVF_vect){
   OCR1B = process_zaxis();
-
-  //solinoid motor
-  if(sol_des_pos == sol_position){
-    solinoid_halt();
-  }
-  if(sol_des_pos > sol_position ){
-    solinoid_cw(); //make sure this is actually cw
-  }
-  if(sol_des_pos < sol_position){
-    solinoid_ccw();
-  }
+  OCR1C = process_ef_rotation();
 } //end timer0 ISR
 //end motor stuff
 //---------------------------------------------------------------------

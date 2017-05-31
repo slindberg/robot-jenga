@@ -1,54 +1,48 @@
-//author: Michiel van der Coelen
-//date 2010-10-10
+// Adapted from https://github.com/pengumc/avr_simple_pid
+// Author: Michiel van der Coelen
 
-#include "pid.h"
 #include <avr/io.h>
 #include <math.h>
-void initializePID(PID_DATA *pid, float p, float i, float d, int32_t minOutput, int32_t maxOutput){
-	pid->lastValue = 0;
-	pid->Kp = p;
-	pid->Ki = i;
-	pid->Kd = d;
-	pid->sumError = 0;
-	pid->maxError = DEFAULT_MAXERROR;
-	// if(i) pid->maxSumError = DEFAULT_MAXSUMERROR/i;
-	// else pid->maxSumError = DEFAULT_MAXSUMERROR;
-  pid->maxSumError = (float)maxOutput;
-  pid->maxOutput = maxOutput;
+#include "pid.h"
+
+void init_pid_state(pid_state_t *state, pid_params_t *params) {
+  state->kp = params->kp;
+  state->ki = params->ki;
+  state->kd = params->kd;
+	state->last_input = 0;
+	state->sum_error = 0;
+  state->direction = PID_DIRECT;
+  state->params = params;
 }
 
-int32_t stepPID(PID_DATA *pid, float value, float reference){
-	float error, temp, pFactor, iFactor, dFactor;
+int32_t step_pid(pid_state_t *state, int32_t input, int32_t set_point) {
+	float error, p_term, i_term, d_term;
+  pid_params_t *params = state->params;
 
-	error = reference - value;
-	if(error > pid->maxError) error = pid->maxError;
-	if(error < -pid->maxError) error = -pid->maxError;
+	error = (float)(set_point - input);
 
-	//P
-	pFactor = error * pid->Kp;
+	p_term = error * state->kp;
 
-	//I
-	temp = pid->sumError + error;
-	if(temp > pid->maxSumError) temp = pid->maxSumError;
-	if(temp < -pid->maxSumError) temp = -pid->maxSumError;
-	pid->sumError = temp;
-	iFactor = pid->sumError * pid->Ki;
+	state->sum_error += error;
+	i_term = state->sum_error * state->ki;
+	if (i_term > params->max_output) i_term = params->max_output;
+	if (i_term < params->min_output) i_term = params->min_output;
 
-	//D
-	dFactor = (value - pid->lastValue)*pid->Kd;
-	pid->lastValue = value;
+	d_term = (input - state->last_input) * state->kd;
+	state->last_input = input;
 
-	temp = pFactor + iFactor + dFactor;
+	int32_t output = (int32_t)(p_term + i_term - d_term);
+	if (output > params->max_output) output = params->max_output;
+  if (output < params->min_output) output = params->min_output;
 
-	int32_t result = ((int32_t) temp);
-
-	if(result > pid->maxOutput) result = pid->maxOutput;
-  if(result < pid->minOutput) result = pid->minOutput;
-
-  return result;
+  return output;
 }
 
-void resetSumError(PID_DATA *pid){
-	pid->sumError =0;
-	pid->maxSumError = DEFAULT_MAXSUMERROR/pid->Ki;
+void set_pid_direction(pid_state_t *state, pid_dir_t direction) {
+  if (state->direction != direction) {
+    state->kp = -state->kp;
+    state->ki = -state->ki;
+    state->kd = -state->kd;
+    state->direction = direction;
+  }
 }

@@ -17,7 +17,7 @@ if os == 'Linux':
 
 port = serial.Serial(devices[os], baudrate=9600, timeout=3.0)
 
-while 1:
+while True:
     try:
         command = sys.stdin.readline()
     except KeyboardInterrupt:
@@ -31,3 +31,9 @@ while 1:
     port.write(command)
     response = port.read(4)
     print(response)
+
+    # Debugging: just continuously read and print each byte
+    # while True:
+    #     response = port.read()
+    #     sys.stdout.write(response)
+    #     sys.stdout.flush()

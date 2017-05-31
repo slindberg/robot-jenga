@@ -1,27 +1,35 @@
-#ifndef PID2_H
-#define PID2_H
+#ifndef PID_H
+#define PID_H
+
 #include <math.h>
 #include <avr/io.h>
-#define DEFAULT_MAXERROR 10e8
-#define DEFAULT_MAXSUMERROR 10e12
+#define PID_DIRECT 0
+#define PID_REVERSE 1
 
-typedef struct PID_DATA{
-	float lastValue;
-	float Kp;
-	float Ki;
-	float Kd;
-	float sumError;
-	float maxError;
-	float maxSumError;
-	int32_t minOutput;
-	int32_t maxOutput;
-} PID_DATA;
+typedef int8_t pid_dir_t;
 
-void initializePID(PID_DATA *pid, float p, float i, float d, int32_t minOutput, int32_t maxOutput);
+typedef struct pid_params_t {
+	float kp;
+	float ki;
+	float kd;
+	int32_t min_output;
+	int32_t max_output;
+} pid_params_t;
 
-//step takes about 500us on an atmega8 at 20 Mhz
-int32_t stepPID(PID_DATA *pid, float value, float reference);
+typedef struct pid_state_t {
+	float kp;
+	float ki;
+	float kd;
+	float sum_error;
+	int32_t last_input;
+  pid_dir_t direction;
+  pid_params_t *params;
+} pid_state_t;
 
-void resetSumError(PID_DATA *pid);
+void init_pid_state(pid_state_t *state, pid_params_t *params);
+
+int32_t step_pid(pid_state_t *state, int32_t input, int32_t set_point);
+
+void set_pid_direction(pid_state_t *state, pid_dir_t direction);
 
 #endif
