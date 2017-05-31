@@ -14,11 +14,11 @@
 #include <math.h>
 #include <stdlib.h>
 #include "uart_functions.h"
+#include "commands.h"
 #include "arm_control.h"
-#include "arm_paths.h"
 #include "zaxis_control.h"
 #include "ef_rotation_control.h"
-#include "def.h" //functions with my DEFINES in it
+#include "def.h"
 
 //--------------------------
 //ADC
@@ -29,7 +29,6 @@ uint16_t IR2_num = 0; 	//this is the number outputted by the adc
 void adc_init();
 ISR(ADC_vect);
 //--------------------------
-
 
 void tcnt0_init(void);
 ISR(TIMER0_OVF_vect);
@@ -54,138 +53,25 @@ void tcnt3_init(); //servo pwm
 
 void get_IR_data();
 
-void handle_heartbeat_command();
-void handle_arm_movement_command();
-void handle_zaxis_home_command();
-void handle_fire_solenoid_command();
-
-void wait_for_command() {
-  char command = uart_getc();
-
-  switch (command) {
-    // heartbeat
-    case 'P':
-    case 'p':
-      handle_heartbeat_command();
-      break;
-
-      // arm movement
-    case 'A':
-    case 'a':
-      handle_arm_movement_command();
-      uart_puts("Done");
-      break;
-
-      // rotate end effector
-    case 'R':
-    case 'r':
-      uart_putc('R');
-      break;
-
-    case 'H':
-    case 'h':
-      handle_zaxis_home_command();
-      break;
-
-      // z-axis down one block
-    case 'Z':
-    case 'z':
-      move_zaxis(-3675);
-      uart_puts("Done");
-      break;
-
-      // z-axis up one block
-    case 'X':
-    case 'x':
-      move_zaxis(3675);
-      uart_puts("Done");
-      break;
-
-    case 'W':
-    case 'w':
-      rotate_ef(-50);
-      uart_puts("Done");
-      break;
-
-    case 'C':
-    case 'c':
-      rotate_ef(50);
-      uart_puts("Done");
-      break;
-
-      // fire solenoid
-    case 'F':
-    case 'f':
-      handle_fire_solenoid_command();
-      break;
-  }
-}
-
-void handle_heartbeat_command() {
-  uart_putc('.');
-}
-
-void handle_arm_movement_command() {
-  char path_number = uart_getc();
-  uint8_t path_index = (path_number - '0') - 1;
-
-  uint8_t result = start_arm_path(&arm_paths[path_index]);
-
-  if (!result) {
-    uart_puts("Fail");
-    return;
-  }
-
-  // Wait on arm movement to complete
-  while (!is_arm_path_complete());
-  uart_puts("Done");
-}
-
-void handle_zaxis_home_command() {
-  // Just use a
-  home_zaxis();
-  uart_puts("Done");
-}
-
-void handle_fire_solenoid_command() {
-  PORTF |= (1<<S_TRIG);
-  _delay_ms(20);
-  PORTF &= ~(1<<S_TRIG);
-  uart_puts("Done");
-}
-
 int main() {
   //setting up pins
   rob_init();
 
-  //-------------------
   //interrupts
   tcnt0_init(); //DC motor control
-
-  //steppers
-  tcnt2_init(); //stepper motors
-
   tcnt1_init(); //DC motor pwm
-  tcnt3_init(); //Servo motor pwm
+  tcnt2_init(); //stepper motors
+  tcnt3_init(); //servo motor pwm
 
   //adc_init(); //we only need this if we are using IR sensors
   uart_init(); //uart
   sei(); //enable all interrupts before entering loop
-  //-------------------
 
   // PID control initilization
   init_zaxis_pid();
   init_ef_pid();
 
-  //start of jenga protocol
-
-  //check for orthagonality here
-
-  //make it go down all the way until it hits the bot/top z sensor
-
-  while(1){
-
-    //-----------------------------------------
+  while(1) {
     //debug
     // int32_t value1 = (int32_t)get_zaxis_position();
     // uart_puts(itoa(value1, "",10));
@@ -199,31 +85,6 @@ int main() {
     // _delay_ms(10);
 
     wait_for_command();
-
-    //1. wait for on signal
-
-    //2a. let catcher down
-
-    //2b. extend arm out
-
-    //figure out where to go
-
-    //while(invalid block){
-    //3. move to the desired row and position
-
-    //4. Analyze if the robot has a valid block
-
-    //5. If not then go back to 3
-    //} //end while invalid block
-
-    //6. position servo so it's flush
-
-    //7. shoot! and save the data that it hit the block
-
-    //8. reel everything back up
-
-    //9. send done signal
-
   } //end while
 
   return 0; //do I need this in a uC?
@@ -285,6 +146,7 @@ ISR(INT2_vect){
 }
 
 //--------------------------------------------------
+// DC motor pwm
 void tcnt1_init(void){
   //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
   //clear when (OCR3A == TCNT3), set on compare match
@@ -302,7 +164,7 @@ void tcnt1_init(void){
   OCR1B = 0;
 } //end tcnt1 init
 
-//-----------------------------------------------------
+//--------------------------------------------------
 //stepper motor functions
 void tcnt2_init(void){
   TCCR2 |= (1<<CS21) | (1<<CS20); //clk/64 mode
@@ -315,9 +177,8 @@ ISR(TIMER2_COMP_vect){
   //^ CTC mode was giving me interrupt and pin errors
   stepper_timer();
 }
-//-----------------------------------------------------
 
-//---------------------------------------------------------------------
+//--------------------------------------------------
 //DC Motor interrupt
 void tcnt0_init(void){
   TCCR0 |= (1<<CS01); //1/8 prescaling should I slow this down?
@@ -329,10 +190,9 @@ ISR(TIMER0_OVF_vect){
   OCR1B = process_zaxis();
   OCR1C = process_ef_rotation();
 } //end timer0 ISR
-//end motor stuff
-//---------------------------------------------------------------------
 
-//--------------------------------------------
+
+//--------------------------------------------------
 //Catcher motor pwm
 void tcnt3_init(){
   //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
@@ -353,10 +213,8 @@ void tcnt3_init(){
   //OCR3A = 375; //down
   //OCR3A = ?; //halt (we don't need this)
 } //tcnt3_init
-//--------------------------------------------
 
-
-//--------------------------------------------
+//--------------------------------------------------
 //adc stuff
 //ERNIE fix this shit so IRs work!!!
 void adc_init(){
