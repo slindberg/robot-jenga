@@ -1,16 +1,14 @@
 #include "arm_control.h"
 
-// Globals :(
 ArmPath *current_arm_path = 0;
-StepperState left_stepper_state;
-StepperState right_stepper_state;
-
-void init_stepper_pins(uint8_t dir_left, uint8_t step_left, uint8_t dir_right, uint8_t step_right) {
-  left_stepper_state.travel_mask = 1 << step_left;
-  left_stepper_state.direction_mask = 1 << dir_left;
-  right_stepper_state.travel_mask = 1 << step_right;
-  right_stepper_state.direction_mask = 1 << dir_right;
-}
+StepperState left_stepper_state = {
+  .travel_mask = 1 << STEP_L,
+  .direction_mask = 1 << DIR_L
+};
+StepperState right_stepper_state = {
+  .travel_mask = 1 << STEP_R,
+  .direction_mask = 1 << DIR_R
+};
 
 // Begin an arm path
 uint8_t start_arm_path(ArmPath *arm_path) {
@@ -19,10 +17,10 @@ uint8_t start_arm_path(ArmPath *arm_path) {
     current_arm_path = arm_path;
     init_stepper_state(&left_stepper_state, &(current_arm_path->left));
     init_stepper_state(&right_stepper_state, &(current_arm_path->right));
-    
+
     return 1;
   }
-  
+
   return 0;
 }
 
@@ -45,7 +43,7 @@ void stepper_timer(ArmPath *arm_path) {
   if (current_arm_path) {
     move_stepper(&right_stepper_state);
     move_stepper(&left_stepper_state);
-    
+
     // Check to see if the movements are complete
     if (is_arm_path_complete()) {
       current_arm_path = 0;
@@ -64,7 +62,7 @@ void move_stepper(StepperState *state) {
   if (!state->movement) {
     return;
   }
-  
+
   // Clear the travel pin to reset pulse state
   STEP_PORT &= ~state->travel_mask;
 

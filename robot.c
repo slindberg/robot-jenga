@@ -164,7 +164,6 @@ int main() {
 
   //steppers
   tcnt2_init(); //stepper motors
-  init_stepper_pins(DIR_L, STEP_L, DIR_R, STEP_R);
 
   tcnt1_init(); //DC motor pwm
   tcnt3_init(); //Servo motor pwm

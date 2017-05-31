@@ -2,6 +2,7 @@
 #define _ARM_CONTROL_H_
 
 #include <avr/io.h>
+#include "def.h"
 
 #define STEP_PORT PORTA
 #define STEP_INTERVAL 100
@@ -27,7 +28,6 @@ typedef struct StepperState {
   uint8_t delay_count;
 } StepperState;
 
-void init_stepper_pins(uint8_t dir_left, uint8_t step_left, uint8_t dir_right, uint8_t step_right);
 uint8_t start_arm_path(ArmPath *arm_path);
 uint8_t is_arm_path_complete();
 void stepper_timer();
