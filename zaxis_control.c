@@ -69,7 +69,7 @@ uint16_t process_zaxis() {
           z_down();
         }
 
-        z_duty = step_pid(&z_pid_state, z_set_point, z_position);
+        z_duty = step_pid(&z_pid_state, z_position, z_set_point);
       }
     }
   }

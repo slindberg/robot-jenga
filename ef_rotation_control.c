@@ -50,7 +50,7 @@ uint16_t process_ef_rotation() {
       ef_halt();
     }
 
-    ef_duty = step_pid(&ef_pid_state, ef_set_point, ef_angle);
+    ef_duty = step_pid(&ef_pid_state, ef_angle, ef_set_point);
   }
   count++;
 
