@@ -3,7 +3,7 @@ from robot import *
 robot = Robot(
     timer_delay = 1/(16e6/(64*64)),
     interval_size = 100,
-    average_arm_speed = 20, # mm/sk
+    average_arm_speed = 10, # mm/sk
     arm_start_position = Point(-8.50752, -184.9257),
     arm_left = Arm(
         p_base = Point(90, 104.45625),

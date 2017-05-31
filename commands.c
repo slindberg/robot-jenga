@@ -1,96 +1,103 @@
 #include "commands.h"
 
+// Preallocated array buffers for custom path intervals
+int8_t left_intervals[256];
+int8_t right_intervals[256];
+
+arm_path_t custom_arm_path = {
+  .left = {
+    .intervals = left_intervals,
+    .length = 0,
+  },
+  .right = {
+    .intervals = right_intervals,
+    .length = 0,
+  }
+};
+
 void wait_for_command() {
-  char command = uart_getc();
+  char command = read_command();
 
   switch (command) {
-    // heartbeat
-    case 'P':
-    case 'p':
-      handle_heartbeat_command();
-      break;
-
-      // arm movement
-    case 'A':
-    case 'a':
-      handle_arm_movement_command();
-      uart_puts("Done");
-      break;
-
-      // rotate end effector
-    case 'R':
-    case 'r':
-      uart_putc('R');
+    case '.':
+      // heartbeat
       break;
 
     case 'H':
-    case 'h':
       handle_zaxis_home_command();
       break;
 
-      // z-axis down one block
     case 'Z':
-    case 'z':
-      move_zaxis(-3675);
-      uart_puts("Done");
+      handle_zaxis_move_command();
       break;
 
-      // z-axis up one block
-    case 'X':
-    case 'x':
-      move_zaxis(3675);
-      uart_puts("Done");
+    case 'P':
+      handle_predefined_arm_move_command();
       break;
 
-    case 'W':
-    case 'w':
-      rotate_ef(-50);
-      uart_puts("Done");
+    case 'A':
+      handle_custom_arm_move_command();
       break;
 
-    case 'C':
-    case 'c':
-      rotate_ef(50);
-      uart_puts("Done");
+    case 'R':
+      handle_ef_rotate_command();
       break;
 
-      // fire solenoid
     case 'F':
-    case 'f':
       handle_fire_solenoid_command();
       break;
-  }
-}
 
-void handle_heartbeat_command() {
-  uart_putc('.');
-}
-
-void handle_arm_movement_command() {
-  char path_number = uart_getc();
-  uint8_t path_index = (path_number - '0') - 1;
-
-  uint8_t result = start_arm_path(&arm_paths[path_index]);
-
-  if (!result) {
-    uart_puts("Fail");
-    return;
+    default:
+      // bad command
+      write_str("X");
+      return;
   }
 
-  // Wait on arm movement to complete
-  while (!is_arm_path_complete());
-  uart_puts("Done");
+  write_str(".");
 }
 
 void handle_zaxis_home_command() {
-  // Just use a
   home_zaxis();
-  uart_puts("Done");
+}
+
+void handle_zaxis_move_command() {
+  // The next four bytes are the signed number of encoder steps to take
+  int16_t distance = read_int16();
+
+  move_zaxis(distance);
+}
+
+void handle_predefined_arm_move_command() {
+  // The next two bytes are the number of the predefined path
+  int path_number = read_int8();
+
+  start_arm_path(&arm_paths[path_number - 1]);
+}
+
+void handle_custom_arm_move_command() {
+  // The next two bytes are the number of intervals in the path
+  char path_size = read_int8();
+
+  // The remaining bytes represent the paths, left then right
+  read_int8_array(left_intervals, path_size);
+  read_int8_array(right_intervals, path_size);
+
+  custom_arm_path.left.length = path_size;
+  custom_arm_path.right.length = path_size;
+
+  start_arm_path(&custom_arm_path);
+}
+
+void handle_ef_rotate_command() {
+  // The next four bytes are the signed number of encoder steps to take
+  int16_t angle = read_int16();
+
+  rotate_ef(angle);
 }
 
 void handle_fire_solenoid_command() {
   PORTF |= (1<<S_TRIG);
   _delay_ms(20);
   PORTF &= ~(1<<S_TRIG);
-  uart_puts("Done");
 }
+

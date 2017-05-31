@@ -35,7 +35,7 @@ class CompoundPath(Path):
         self.segments = segments
         self.length = sum(s.length for s in segments)
 
-    def position_for_t(self, t, start):
+    def position_for_t(self, t, start = Point(0, 0)):
         cur_length = 0
         for s in self.segments:
             if t <= (s.length + cur_length) / self.length:
@@ -48,7 +48,7 @@ class CompoundPath(Path):
 
 predefined_paths = {
     'enter': {
-    'duration': 3,
+        'duration': 3,
         'start': Point(-8.50752, -184.9257),
         'path': CompoundPath([
             ArcPath(Point(-221.49248,184.9257), 340.2250, False),

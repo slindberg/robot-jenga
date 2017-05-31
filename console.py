@@ -3,6 +3,7 @@
 import sys
 import platform
 import serial
+from commands import handle_command, CommandError
 
 os = platform.system()
 
@@ -15,22 +16,35 @@ devices = {
 if os == 'Linux':
     print "sudo chmod 777 /dev/ttyUSB0", sys.argv[0]
 
-port = serial.Serial(devices[os], baudrate=9600, timeout=3.0)
+port = serial.Serial(devices[os], baudrate=9600, timeout=1.0)
 
 while True:
     try:
-        command = sys.stdin.readline()
+        line = sys.stdin.readline()
     except KeyboardInterrupt:
         break
 
-    if not command:
+    if not line:
         break
 
-    command = command.rstrip()
+    parts = line.rstrip().split()
+    command = parts.pop(0)
 
-    port.write(command)
-    response = port.read(4)
-    print(response)
+    try:
+        data = handle_command(command, parts)
+    except CommandError as err:
+        print('Error: ' + err.message)
+        break
+
+    port.write(data)
+
+    # Response
+    length_hex = port.read(2)
+
+    if length_hex:
+        length = ord(length_hex.decode('hex'))
+        response = port.read(length)
+        print(response)
 
     # Debugging: just continuously read and print each byte
     # while True:

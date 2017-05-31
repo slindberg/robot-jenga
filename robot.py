@@ -29,12 +29,25 @@ class Robot:
         easing_fn = lambda t: 3*t**2 - 2*t**3
         self.vel_curve = velocity_curve_fn(.25, .25, .1, easing_fn)
 
-    def move_ef(self, delta):
-        duration = delta/self.average_arm_speed
+    def execute_arm_path(self, delta):
+        intervals = self.calculate_arm_path(delta)
+        self.ef_position += delta
+
+        return intervals
+
+    def execute_predefined_arm_path(self, path_name):
+        path = predefined_paths[path_name]['path']
+        self.ef_position = path.position_for_t(1, self.ef_position);
+
+    def calculate_arm_path(self, delta):
+        duration = delta.length()/self.average_arm_speed
         path = LinePath(delta)
         path_fn = path.path_fn(self.ef_position)
 
-        return self.step_intervals_for_path(path_fn, duration)
+        try:
+            return self.step_intervals_for_path(path_fn, duration)
+        except ValueError:
+            raise Error('Invalid path geometry')
 
     def samples_for_duration(self, duration):
         return int(math.ceil(duration/(self.interval_size*self.timer_delay)))
