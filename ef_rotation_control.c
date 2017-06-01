@@ -1,11 +1,11 @@
 #include "ef_rotation_control.h"
 
 pid_params_t ef_pid_params = {
-	.kp = 100.0,
+	.kp = 1.0,
 	.ki = 0.0,
-	.kd = 100.0,
-	.min_output = 1500,
-	.max_output = 5000,
+	.kd = 0.0,
+	.min_output = 1700,
+	.max_output = 2200,
 };
 
 pid_state_t ef_pid_state;
@@ -38,18 +38,18 @@ uint16_t process_ef_rotation() {
   static uint8_t count = 0;
   static uint16_t ef_duty = 0;
 
+  if (ef_set_point > ef_angle) {
+    set_pid_direction(&ef_pid_state, PID_DIRECT);
+    ef_ccw();
+  } else if (ef_set_point < ef_angle) {
+    set_pid_direction(&ef_pid_state, PID_REVERSE);
+    ef_cw();
+  } else {
+    ef_halt();
+  }
+
   // TODO: Change timer interval to avoid this counter
   if (count == 0) {
-    if (ef_set_point > ef_angle) {
-      set_pid_direction(&ef_pid_state, PID_DIRECT);
-      ef_ccw();
-    } else if (ef_set_point < ef_angle) {
-      set_pid_direction(&ef_pid_state, PID_REVERSE);
-      ef_cw();
-    } else {
-      ef_halt();
-    }
-
     ef_duty = step_pid(&ef_pid_state, ef_angle, ef_set_point);
   }
   count++;
