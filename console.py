@@ -55,11 +55,12 @@ while True:
     is_turn = False
     while not is_turn:
         send(turn_check_command())
-        is_turn = int(recieve())
-        time.sleep(0.1)
+        is_turn = recieve() == '1'
+        time.sleep(0.05)
 
     print('Beginning turn');
     send(begin_turn_command())
+    print(recieve())
 
     while True:
         try:
@@ -70,6 +71,7 @@ while True:
 
             # This is the turn ended signal
             if response == '!':
+                print('Ending turn');
                 break
         except KeyboardInterrupt:
             sys.exit();
