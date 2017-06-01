@@ -25,7 +25,7 @@ while True:
         break
 
     if not line:
-        break
+        continue
 
     parts = line.rstrip().split()
     command = parts.pop(0)
@@ -34,7 +34,7 @@ while True:
         data = handle_command(command, parts)
     except CommandError as err:
         print('Error: ' + err.message)
-        break
+        continue
 
     port.write(data)
 
@@ -46,7 +46,7 @@ while True:
             length = ord(length_hex.decode('hex'))
         except:
             print("Bad response length: '" + length_hex + "'")
-            break
+            continue
 
         response = port.read(length)
         print(response)
