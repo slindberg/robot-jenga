@@ -8,9 +8,13 @@
 #include "arm_paths.h"
 #include "zaxis_control.h"
 #include "ef_rotation_control.h"
+#include "catcher_control.h"
 
 void wait_for_command();
 
+char *handle_turn_check_command();
+void handle_begin_turn_command();
+char *handle_end_turn_command();
 void handle_zaxis_home_command();
 void handle_zaxis_move_command();
 void handle_predefined_arm_move_command();

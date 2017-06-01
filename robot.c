@@ -18,6 +18,7 @@
 #include "arm_control.h"
 #include "zaxis_control.h"
 #include "ef_rotation_control.h"
+#include "catcher_control.h"
 #include "def.h"
 
 //--------------------------
@@ -38,6 +39,7 @@ ISR(TIMER0_OVF_vect);
 ISR(INT0_vect);
 ISR(INT1_vect);
 ISR(INT2_vect);
+ISR(INT3_vect);
 
 void rob_init();
 
@@ -93,7 +95,7 @@ int main() {
 void rob_init(){
   //A
   DDRA |=  (1<<STEP_L) | (1<<STEP_R) | (1<<DIR_L) | (1<<DIR_R);
-  //PORTA will be 0 initally
+  PORTA |= (1<<START_SIG);
 
   //B
   DDRB |= (1<<ZMOTOR_R) | (1<<ZMOTOR_L) |
@@ -109,10 +111,9 @@ void rob_init(){
   PORTD |= (1<<TOP_Z) | (1<<BOT_Z) | (1<<CATCHER_SENSE);
 
   //E
-  DDRE |= (0<<TRANS) | (1<<RECEV) |
-    (0<<START_SIG) | (1<<END_SIG) | (0<<ORTHO);
+  DDRE |= (0<<TRANS) | (1<<RECEV);
   DDRE |= (1<<3) | (1<<4) | (1<<5); //pwm
-  PORTE |= (1<<TRANS) | (1<<ORTHO) | (1<<START_SIG);
+  PORTE |= (1<<TRANS);
 
   //F
   DDRF |= (0<<IR0) | (0<<IR1) | (0<<IR2)
@@ -123,9 +124,10 @@ void rob_init(){
   EICRA |= ( (1<<ISC01) | (1<<ISC00) );
   EICRA |= ( (1<<ISC11) | (0<<ISC10) ); //falling edge
   EICRA |= ( (1<<ISC21) | (0<<ISC20) );
+  EICRA |= ( (1<<ISC31) | (1<<ISC30) );
 
   //enable interrupts
-  EIMSK |= (1<<INT0) | (1<<INT1) | (1<<INT2);
+  EIMSK |= (1<<INT0) | (1<<INT1) | (1<<INT2) | (1<<INT3);
 }
 
 //PD0
@@ -143,6 +145,10 @@ ISR(INT1_vect){
 //may be hardware
 ISR(INT2_vect){
   ef_rotation_encoder();
+}
+
+ISR(INT3_vect){
+  catcher_limit_switch();
 }
 
 //--------------------------------------------------
@@ -197,7 +203,7 @@ ISR(TIMER0_OVF_vect){
 void tcnt3_init(){
   //Fast PWM, TOP: ICR3, update: BOT, TOV3 set on TOP
   //clear when (OCR3A == TCNT3), set on compare match
-  TCCR3A |= (1<<WGM31) | (1<<COM3A1) | (1<<COM3B1);
+  TCCR3A |= (1<<WGM31) | (1<<COM3A1);
   TCCR3B |= (1<<WGM33) | (1<<WGM32);
 
   TCCR3B |=  (1<<CS31) | (1<<CS30); //1/64
@@ -205,13 +211,9 @@ void tcnt3_init(){
   //For scaling
   ICR3 = 5000; //Top
 
-  //pwm for z motor
-  OCR3B = 2500; //min
-
   //pwm for servo
   OCR3A = 250; //spool
   //OCR3A = 375; //down
-  //OCR3A = ?; //halt (we don't need this)
 } //tcnt3_init
 
 //--------------------------------------------------

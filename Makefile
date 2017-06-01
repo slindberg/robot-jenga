@@ -1,5 +1,5 @@
 PRG            = robot
-OBJ            = $(PRG).o uart_functions.o protocol.o commands.o arm_control.o arm_paths.o zaxis_control.o pid.o ef_rotation_control.o
+OBJ            = $(PRG).o uart_functions.o protocol.o commands.o arm_control.o arm_paths.o zaxis_control.o pid.o ef_rotation_control.o catcher_control.o
 MCU_TARGET     = atmega128
 OPTIMIZE       = -O2    # options are 1, 2, 3, s
 DEFS           =

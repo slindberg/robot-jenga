@@ -17,6 +17,7 @@ arm_path_t custom_arm_path = {
 
 void wait_for_command() {
   char command = read_command();
+  char *response = "."; // default response
 
   // there's a timeout in uart_getc that returns 0, don't treat it as a command
   if (command == 0) {
@@ -26,6 +27,18 @@ void wait_for_command() {
   switch (command) {
     case '.':
       // heartbeat
+      break;
+
+    case 'T':
+      response = handle_turn_check_command();
+      break;
+
+    case 'B':
+      handle_begin_turn_command();
+      break;
+
+    case 'E':
+      response = handle_end_turn_command();
       break;
 
     case 'H':
@@ -57,7 +70,24 @@ void wait_for_command() {
       return;
   }
 
-  write_str(".");
+  write_str(response);
+}
+
+char *handle_turn_check_command() {
+  if (bit_is_set(PINA, START_SIG_PIN)) {
+    return "1";
+  } else {
+    return "0";
+  }
+}
+
+void handle_begin_turn_command() {
+  lower_catcher();
+}
+
+char *handle_end_turn_command() {
+  raise_catcher();
+  return "!";
 }
 
 void handle_zaxis_home_command() {

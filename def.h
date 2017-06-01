@@ -1,4 +1,4 @@
-//defines.h 
+//defines.h
 //2017 - 05 - 16
 //Made to keep all the pins organized!
 
@@ -43,9 +43,8 @@
 #define RECEV PE1
 
 //signals
-#define START_SIG PE6 //for game rules
-#define END_SIG PE7
-#define ORTHO PE2
+#define START_SIG PA0 //for game rules
+#define START_SIG_PIN 0
 
 
 

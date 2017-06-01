@@ -2,8 +2,9 @@
 
 import sys
 import platform
+import time
 import serial
-from commands import handle_command, CommandError
+from commands import *
 
 os = platform.system()
 
@@ -16,43 +17,71 @@ devices = {
 if os == 'Linux':
     print "sudo chmod 777 /dev/ttyUSB0", sys.argv[0]
 
-port = serial.Serial(devices[os], baudrate=9600, timeout=1.0)
+port = serial.Serial(devices[os], baudrate=9600, timeout=None)
 
-while True:
-    try:
-        line = sys.stdin.readline()
-    except KeyboardInterrupt:
-        break
+class ResponseError(Exception):
+    pass
+
+class NoCommandError(Exception):
+    pass
+
+def read_command():
+    line = sys.stdin.readline().rstrip()
 
     if not line:
-        continue
+        raise NoCommandError()
 
-    parts = line.rstrip().split()
+    parts = line.split()
     command = parts.pop(0)
 
-    try:
-        data = handle_command(command, parts)
-    except CommandError as err:
-        print('Error: ' + err.message)
-        continue
+    return (command, parts)
 
+def send(data):
     port.write(data)
 
-    # Response
+def recieve():
     length_hex = port.read(2)
 
     if length_hex:
         try:
             length = ord(length_hex.decode('hex'))
         except:
-            print("Bad response length: '" + length_hex + "'")
+            raise ResponseError("Bad response length: '" + length_hex + "'")
+
+        return port.read(length)
+
+while True:
+    print('Waiting on turn signal');
+    is_turn = False
+    while not is_turn:
+        send(turn_check_command())
+        is_turn = int(recieve())
+        time.sleep(0.1)
+
+    print('Beginning turn');
+    send(begin_turn_command())
+
+    while True:
+        try:
+            (command, args) = read_command()
+            send(handle_command(command, args))
+            response = recieve()
+            print(response)
+
+            # This is the turn ended signal
+            if response == '!':
+                break
+        except KeyboardInterrupt:
+            sys.exit();
+        except (CommandError, ResponseError) as err:
+            print('Error: ' + err.message)
+            continue
+        except NoCommandError:
             continue
 
-        response = port.read(length)
-        print(response)
+        # Debugging: just continuously read and print each byte
+        # while True:
+        #     response = port.read()
+        #     sys.stdout.write(response)
+        #     sys.stdout.flush()
 
-    # Debugging: just continuously read and print each byte
-    # while True:
-    #     response = port.read()
-    #     sys.stdout.write(response)
-    #     sys.stdout.flush()

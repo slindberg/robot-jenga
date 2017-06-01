@@ -16,6 +16,8 @@ def handle_command(command, args):
         return ef_command(*args)
     elif command == 'fire':
         return fire_command()
+    elif command == 'end':
+        return end_turn_command()
     else:
         raise CommandError("Unknown command'" + command + "'")
 
@@ -100,6 +102,15 @@ def ef_command(direction, distance):
 
 def fire_command():
     return 'F'
+
+def turn_check_command():
+    return 'T'
+
+def begin_turn_command():
+    return 'B'
+
+def end_turn_command():
+    return 'E'
 
 def tohex(value, bit_width):
     hex_str = hex((value + (1 << bit_width)) % (1 << bit_width))
