@@ -36,8 +36,11 @@ class Robot:
         return intervals
 
     def execute_predefined_arm_path(self, path_name):
-        path = predefined_paths[path_name]['path']
-        self.ef_position = path.position_for_t(1, self.ef_position);
+        if path_name == "reset":
+            self.ef_position = self.arm_start_position
+        else:
+            path = predefined_paths[path_name]['path']
+            self.ef_position = path.position_for_t(1, self.ef_position);
 
     def calculate_arm_path(self, delta):
         duration = delta.length()/self.average_arm_speed

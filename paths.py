@@ -46,22 +46,40 @@ class CompoundPath(Path):
             cur_length += s.length
             start = s.position_for_t(1, start)
 
+class ReversePath(Path):
+    def __init__(self, path):
+        self.forward_path = path
+
+    def position_for_t(self, t, start = Point(0, 0)):
+        return self.forward_path.position_for_t(1-t, start)
+
+enter_path = CompoundPath([
+    ArcPath(Point(-221.49248,184.9257), 340.2250, False),
+    LinePath(Point(-107.5,230)),
+])
+
+exit_path = ReversePath(enter_path)
+
+side_path = CompoundPath([
+    LinePath(Point(82.5,0)),
+    ArcPath(Point(25,25), 25, True),
+    LinePath(Point(0,82.5)),
+])
+
 predefined_paths = {
     'enter': {
         'duration': 3,
         'start': Point(-8.50752, -184.9257),
-        'path': CompoundPath([
-            ArcPath(Point(-221.49248,184.9257), 340.2250, False),
-            LinePath(Point(-107.5,230)),
-        ])
+        'path': enter_path,
+    },
+    'exit': {
+        'duration': 3,
+        'start': Point(-328.99248,414.9257),
+        'path': exit_path,
     },
     'side': {
         'duration': 3,
         'start': Point(-337.5, 230),
-        'path': CompoundPath([
-            LinePath(Point(82.5,0)),
-            ArcPath(Point(25,25), 25, True),
-            LinePath(Point(0,82.5)),
-        ])
+        'path': side_path,
     }
 }
