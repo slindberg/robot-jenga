@@ -2,9 +2,9 @@
 
 pid_params_t z_pid_params = {
 	.kp = 0.25,
-	.ki = 0.0,
+	.ki = 0.05,
 	.kd = 0.0,
-	.min_output = 4000,
+	.min_output = 4200,
 	.max_output = 5000,
 };
 
@@ -54,25 +54,25 @@ uint16_t process_zaxis() {
   static uint8_t count = 0;
   static uint16_t z_duty = 0;
 
-  // TODO: Change timer interval to avoid this counter
-  if (count == 0) {
-    if (run_zmotor == 1) {
-      if (z_set_point == z_position) {
-        z_halt();
-        z_duty = 0;
-      } else {
-        if (z_set_point > z_position) {
-          set_pid_direction(&z_pid_state, PID_DIRECT);
-          z_up();
-        } else if (z_set_point < z_position) {
-          set_pid_direction(&z_pid_state, PID_REVERSE);
-          z_down();
-        }
-
-        z_duty = step_pid(&z_pid_state, z_position, z_set_point);
+  if (run_zmotor) {
+    if (z_set_point == z_position) {
+      z_halt();
+      z_duty = 0;
+    } else {
+      if (z_set_point > z_position) {
+        set_pid_direction(&z_pid_state, PID_DIRECT);
+        z_up();
+      } else if (z_set_point < z_position) {
+        set_pid_direction(&z_pid_state, PID_REVERSE);
+        z_down();
       }
     }
+
+    if (count == 0) {
+      z_duty = step_pid(&z_pid_state, z_position, z_set_point);
+    }
   }
+
   count++;
 
   return z_duty;

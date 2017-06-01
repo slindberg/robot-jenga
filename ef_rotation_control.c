@@ -46,6 +46,7 @@ uint16_t process_ef_rotation() {
     ef_cw();
   } else {
     ef_halt();
+    ef_duty = 0;
   }
 
   // TODO: Change timer interval to avoid this counter
