@@ -42,7 +42,12 @@ while True:
     length_hex = port.read(2)
 
     if length_hex:
-        length = ord(length_hex.decode('hex'))
+        try:
+            length = ord(length_hex.decode('hex'))
+        except:
+            print("Bad response length: '" + length_hex + "'")
+            break
+
         response = port.read(length)
         print(response)
 

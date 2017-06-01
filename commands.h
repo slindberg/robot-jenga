@@ -17,5 +17,6 @@ void handle_predefined_arm_move_command();
 void handle_custom_arm_move_command();
 void handle_ef_rotate_command();
 void handle_fire_solenoid_command();
+void handle_bad_command(char command);
 
 #endif

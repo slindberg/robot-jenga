@@ -4,6 +4,7 @@
 #include <avr/io.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "uart_functions.h"
 
 char read_command();
@@ -15,6 +16,5 @@ void read_int8_array(int8_t *intervals, uint8_t length);
 
 void write_int(int32_t value);
 void write_str(char *response);
-
 
 #endif

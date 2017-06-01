@@ -18,6 +18,11 @@ arm_path_t custom_arm_path = {
 void wait_for_command() {
   char command = read_command();
 
+  // there's a timeout in uart_getc that returns 0, don't treat it as a command
+  if (command == 0) {
+    return;
+  }
+
   switch (command) {
     case '.':
       // heartbeat
@@ -48,8 +53,7 @@ void wait_for_command() {
       break;
 
     default:
-      // bad command
-      write_str("X");
+      handle_bad_command(command);
       return;
   }
 
@@ -101,3 +105,8 @@ void handle_fire_solenoid_command() {
   PORTF &= ~(1<<S_TRIG);
 }
 
+void handle_bad_command(char command) {
+  char buffer[50];
+  snprintf(buffer, sizeof(buffer), "Bad command: '%c'", command);
+  write_str(buffer);
+}

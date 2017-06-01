@@ -40,11 +40,8 @@ void write_int(int32_t value) {
 }
 
 void write_str(char *str) {
-  uint8_t length = 0;
+  uint8_t length = strlen(str);
   char buffer[3];
-
-  // Determine length of string
-  while(str[length] != '\0') length++;
 
   // Encode the length in hex
   snprintf(buffer, 3, "%02X", length);
