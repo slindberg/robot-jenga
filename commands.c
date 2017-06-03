@@ -24,6 +24,8 @@ void wait_for_command() {
     return;
   }
 
+  start_response();
+
   switch (command) {
     case '.':
       // heartbeat
@@ -71,6 +73,7 @@ void wait_for_command() {
   }
 
   write_str(response);
+  end_response();
 }
 
 char *handle_turn_check_command() {

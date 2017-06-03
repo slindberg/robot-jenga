@@ -1,26 +1,101 @@
-from robot import *
+import sys
+import platform
+import time
+import serial
+from commands import *
 
-robot = Robot(
-    timer_delay = 1/(16e6/(64*64)),
-    interval_size = 100,
-    average_arm_speed = 10, # mm/sk
-    arm_start_position = Point(-8.50752, -184.9257),
-    arm_left = Arm(
-        p_base = Point(90, 104.45625),
-        r_input = 336.675,
-        r_follower = 232.0,
-        gear_ratio = 96/20,
-        microsteps = 16,
-        steps_per_rev = 200,
-    ),
-    arm_right = Arm(
-        p_base = Point(30, 244.45625),
-        r_input = 243.325,
-        r_follower = 190.0,
-        gear_ratio = 72/20,
-        microsteps = 16,
-        steps_per_rev = 200,
-    ),
-)
+start_char = ':'
+end_char = ';'
+reconnect_timeout = 10 # seconds
+receive_timeout = 5 # seconds
+write_timeout = 5 # seconds
 
-robot.output_step_intervals('enter');
+class NotConnectedError(Exception):
+    pass
+
+class Controller:
+    def __init__(self, robot):
+        self.commander = CommandProtocol(robot)
+        self.port = None
+
+    def connect(self):
+        os = platform.system()
+
+        devices = {
+            'Darwin': '/dev/tty.SLAB_USBtoUART',
+            'Linux': '/dev/ttyUSB0',
+        }
+
+        # To write to the serial port, we have to have write permission on the device
+        if os == 'Linux':
+            print 'sudo chmod 777 /dev/ttyUSB0', sys.argv[0]
+
+        try:
+            self.port = serial.Serial(devices[os], baudrate=9600, timeout=receive_timeout, write_timeout=write_timeout)
+        except serial.SerialException as err:
+            raise NotConnectedError(str(err))
+
+    def send(self, data):
+        if not self.port:
+            raise NotConnectedError("Not connected, cannot send data")
+
+        data_received = False
+
+        # Attempt to send until the response start character is received
+        while not data_received:
+            try:
+                self.port.write(data)
+                data_received = self.port.read() == start_char
+            except serial.SerialTimeoutException:
+                print('Receive timeout reached')
+                return []
+
+        return self.receive()
+
+    def receive(self):
+        if not self.port:
+            raise NotConnectedError('Not connected, cannot receive data')
+
+        last_char_ts = time.clock()
+
+        # Read until the termination character is received or timeout
+        while True:
+            char = self.port.read()
+
+            if not char:
+                print('Receive timeout reached')
+                break
+
+            if char == end_char:
+                break
+
+            yield char
+
+    def execute_command(self, command, args):
+        data = self.commander.handle_command(command, args)
+        return self.send(data)
+
+    def wait_for_turn(self):
+        print('Waiting on turn signal')
+
+        is_turn = False
+        while not is_turn:
+            response = self.send(self.commander.turn_check_command())
+            is_turn = response == '1'
+            time.sleep(0.05)
+
+    def play(self):
+        self.connect()
+
+        while True:
+            self.wait_for_turn()
+            self.play_turn()
+
+    def play_turn(self):
+        self.execute_command('begin')
+        self.execute_command('arm', 'enter')
+        # data = self.execute_command('scan', 'west', 15)
+
+        # TODO: somehow wait for commands to complete
+
+        self.execute_command('end')

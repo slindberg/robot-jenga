@@ -40,13 +40,15 @@ void write_int(int32_t value) {
 }
 
 void write_str(char *str) {
-  uint8_t length = strlen(str);
-  char buffer[3];
-
-  // Encode the length in hex
-  snprintf(buffer, 3, "%02X", length);
-
-  // Protocol is to write length of message in first two bytes
-  uart_puts(buffer);
   uart_puts(str);
+}
+
+void start_response() {
+  // Frame start character
+  uart_putc(':');
+}
+
+void end_response() {
+  // Frame end character
+  uart_putc(';');
 }

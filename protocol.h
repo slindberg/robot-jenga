@@ -16,5 +16,7 @@ void read_int8_array(int8_t *intervals, uint8_t length);
 
 void write_int(int32_t value);
 void write_str(char *response);
+void start_response();
+void end_response();
 
 #endif
