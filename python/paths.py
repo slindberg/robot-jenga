@@ -49,9 +49,10 @@ class CompoundPath(Path):
 class ReversePath(Path):
     def __init__(self, path):
         self.forward_path = path
+        self.offset = path.position_for_t(1)
 
     def position_for_t(self, t, start = Point(0, 0)):
-        return self.forward_path.position_for_t(1-t, start)
+        return start - self.offset + self.forward_path.position_for_t(1-t)
 
 enter_path = CompoundPath([
     ArcPath(Point(-221.49248,184.9257), 340.2250, False),
@@ -74,7 +75,7 @@ predefined_paths = {
     },
     'exit': {
         'duration': 3,
-        'start': Point(-328.99248,414.9257),
+        'start': Point(-337.5, 230),
         'path': exit_path,
     },
     'side': {
