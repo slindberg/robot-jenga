@@ -98,6 +98,8 @@ void handle_zaxis_move_command() {
   int16_t distance = read_int16();
 
   move_zaxis(distance);
+
+  // debug_zaxis_position();
 }
 
 void handle_arm_move_command() {
@@ -119,6 +121,8 @@ void handle_ef_rotate_command() {
   int16_t angle = read_int16();
 
   rotate_ef(angle);
+
+  // debug_ef_position();
 }
 
 void handle_fire_solenoid_command() {
@@ -128,7 +132,34 @@ void handle_fire_solenoid_command() {
 }
 
 void handle_bad_command(char command) {
-  char buffer[50];
+  char buffer[32];
   snprintf(buffer, sizeof(buffer), "Bad command: '%c'", command);
   write_str(buffer);
 }
+
+void debug_ef_position() {
+  int16_t current_angle, set_point;
+  char buffer[32];
+
+  do {
+    current_angle = get_ef_angle();
+    set_point = get_ef_set_point();
+    snprintf(buffer, sizeof(buffer), "%d %d %u\n", current_angle, set_point, OCR1C);
+    write_str(buffer);
+    // _delay_ms(10);
+  } while (current_angle != set_point);
+}
+
+void debug_zaxis_position() {
+  int32_t current_pos, set_point;
+  char buffer[32];
+
+  do {
+    current_pos = get_zaxis_position();
+    set_point = get_zaxis_set_point();
+    snprintf(buffer, sizeof(buffer), "%ld %ld %u\n", current_pos, set_point, OCR1B);
+    write_str(buffer);
+    // _delay_ms(10);
+  } while (current_pos != set_point);
+}
+
