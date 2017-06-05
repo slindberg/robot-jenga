@@ -39,8 +39,12 @@ class Robot:
         if path_name == "reset":
             self.ef_position = self.arm_start_position
         else:
-            path = predefined_paths[path_name]['path']
-            self.ef_position = path.position_for_t(1, self.ef_position);
+            path_info = predefined_paths[path_name]
+            path = path_info['path']
+            duration = path_info['duration']
+            path_fn = path.path_fn(self.ef_position)
+            self.ef_position = path_fn(1)
+            return self.step_intervals_for_path(path_fn, duration)
 
     def calculate_arm_path(self, delta):
         duration = delta.length()/self.average_arm_speed
@@ -102,7 +106,6 @@ class Robot:
     def output_step_intervals(self, path_name):
         path_data = predefined_paths['enter']
         path_fn = path_data['path'].path_fn(path_data['start'])
-        step_intervals = self.step_intervals_for_path(path_fn, path_data['duration'])
+        intervals = self.step_intervals_for_path(path_fn, path_data['duration'])
 
-        numpy.savetxt(path_name + "_step_intervals.csv", step_intervals.transpose(), delimiter=",", fmt='%d')
-
+        numpy.savetxt(path_name + "_step_intervals.csv", intervals.transpose(), delimiter=",", fmt='%d')

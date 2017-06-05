@@ -63,30 +63,29 @@ class CommandProtocol:
 
     def arm_command(self, path_name, distance = '0'):
         if path_name in predefined_paths:
-            self.robot.execute_predefined_arm_path(path_name)
-            path_number = predefined_paths[path_name]
-            return 'P' + tohex(path_number, 8)
-
-        try:
-           distance = int(distance)
-        except ValueError:
-            raise CommandError("Distance must be integer, got '" + distance + "'")
-
-        if path_name == 'east':
-            delta = Point(distance, 0)
-        elif path_name == 'west':
-            delta = Point(-distance, 0)
-        elif path_name == 'north':
-            delta = Point(0, distance)
-        elif path_name == 'south':
-            delta = Point(0, -distance)
+            intervals = self.robot.execute_predefined_arm_path(path_name)
         else:
-            raise CommandError("Unknown arm path '" + path_name + "'")
+            try:
+               distance = int(distance)
+            except ValueError:
+                raise CommandError("Distance must be integer, got '" + distance + "'")
 
-        if distance == 0:
-            raise CommandError('Must specify nonzero distance')
+            if path_name == 'east':
+                delta = Point(distance, 0)
+            elif path_name == 'west':
+                delta = Point(-distance, 0)
+            elif path_name == 'north':
+                delta = Point(0, distance)
+            elif path_name == 'south':
+                delta = Point(0, -distance)
+            else:
+                raise CommandError("Unknown arm path '" + path_name + "'")
 
-        intervals = self.robot.execute_arm_path(delta)
+            if distance == 0:
+                raise CommandError('Must specify nonzero distance')
+
+            intervals = self.robot.execute_arm_path(delta)
+
         path_length = intervals.shape[0]
 
         left_bytes = ''.join([ tohex(i, 8) for i in intervals[:,0] ])
