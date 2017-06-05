@@ -27,7 +27,7 @@ class Robot:
         self.arm_right = arm_right
 
         easing_fn = lambda t: 3*t**2 - 2*t**3
-        self.vel_curve = velocity_curve_fn(.25, .25, .1, easing_fn)
+        self.vel_fn = velocity_curve_fn(.25, .25, .1, easing_fn)
 
     def execute_arm_path(self, delta):
         intervals = self.calculate_arm_path(delta)
@@ -57,21 +57,17 @@ class Robot:
 
     def step_intervals_for_path(self, path_fn, duration):
         n_points = self.samples_for_duration(duration)
-        step_fn = self.steps_for_t_both(path_fn)
+        step_fn = self.step_fn(path_fn)
 
         return self.step_intervals_for_steps(step_fn, n_points)
 
     def step_intervals_for_steps(self, step_fn, n_points):
-        pos_scale, err = integrate.quad(self.vel_curve, 0, 1)
-        t_curve = numpy.linspace(0, 1, n_points)
-
+        pos_curve = self.pos_curve_for_n(n_points)
         last_steps = [ 0, 0 ]
         step_intervals = numpy.zeros((n_points, 2))
 
-        # TODO: don't keep recalculating this integral, just do it manually
         for i in range(n_points):
-            t, err = integrate.quad(self.vel_curve, 0.0, t_curve[i])
-            steps_i = step_fn(t/pos_scale)
+            steps_i = step_fn(pos_curve[i])
             delta_steps = numpy.subtract(steps_i, last_steps)
             step_intervals[i] = delta_steps
             last_steps = steps_i
@@ -81,19 +77,23 @@ class Robot:
 
         return step_intervals
 
-    def steps_for_t_both(self, path_fn):
+    def pos_curve_for_n(self, n_points):
+        t_range = numpy.linspace(0, 1, n_points)
+        pos_for_t = lambda t: integrate.quad(self.vel_fn, 0, t)
+        scale, _ = pos_for_t(1);
+
+        # TODO: don't keep recalculating this integral, just do it manually
+        return [ pos_for_t(t)[0]/scale for t in t_range ]
+
+    def step_fn(self, path_fn):
         p_initial = path_fn(0)
-        step_for_p_fn = self.steps_for_pos_both(p_initial)
+        left_step_fn = self.step_fn_for_p(self.arm_left, p_initial)
+        right_step_fn = self.step_fn_for_p(self.arm_right, p_initial)
+        step_fn_both = lambda p: [ left_step_fn(p), right_step_fn(p) ]
 
-        return lambda t: step_for_p_fn(path_fn(t))
+        return lambda t: step_fn_both(path_fn(t))
 
-    def steps_for_pos_both(self, p_initial):
-        left_step_fn = self.steps_for_pos(self.arm_left, p_initial)
-        right_step_fn = self.steps_for_pos(self.arm_right, p_initial)
-
-        return lambda p: [ left_step_fn(p), right_step_fn(p) ]
-
-    def steps_for_pos(self, arm, p_initial):
+    def step_fn_for_p(self, arm, p_initial):
         theta_0 = input_angle(arm.p_base, p_initial, arm.r_input, arm.r_follower)
         steps_per_rad = arm.gear_ratio*arm.steps_per_rev*arm.microsteps/(2*math.pi)
 
