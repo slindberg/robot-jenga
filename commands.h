@@ -21,4 +21,7 @@ void handle_ef_rotate_command();
 void handle_fire_solenoid_command();
 void handle_bad_command(char command);
 
+void debug_ef_position();
+void debug_zaxis_position();
+
 #endif

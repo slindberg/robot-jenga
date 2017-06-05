@@ -71,23 +71,11 @@ int main() {
   init_ef_pid();
 
   while(1) {
-    //debug
-    // int32_t value1 = (int32_t)get_zaxis_position();
-    // uart_puts(itoa(value1, "",10));
-    // uart_putc(32); //space
-    // int32_t value2 = (int32_t)get_zaxis_set_point();
-    // uart_puts(itoa(value2, "",10));
-    // uart_putc(32); //space
-    // uart_puts(itoa(OCR1B, "",10));
-    // uart_putc(10); //linefeed
-    // uart_putc(13); //carrage return
-    // _delay_ms(10);
-
     wait_for_command();
-  } //end while
+  }
 
   return 0; //do I need this in a uC?
-} //end main
+}
 
 void rob_init(){
   //A
