@@ -73,7 +73,7 @@ class Controller:
 
     def execute_command(self, command, args):
         data = self.commander.handle_command(command, args)
-        return self.send(data)
+        return self.send(data) if data else []
 
     def wait_for_turn(self):
         print('Waiting on turn signal')

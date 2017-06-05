@@ -14,20 +14,23 @@ class Arm:
         self.steps_per_rev = steps_per_rev
 
 class Robot:
-    def __init__(self, timer_delay, interval_size, average_arm_speed, arm_start_position, arm_left, arm_right):
+    def __init__(self, timer_delay, interval_size, average_arm_speed, ef_start_position, arm_left, arm_right):
         self.z_position = 0
-        self.ef_position = arm_start_position
+        self.ef_position = ef_start_position
         self.ef_angle = 0
 
         self.timer_delay = timer_delay
         self.interval_size = interval_size
         self.average_arm_speed = average_arm_speed
-        self.arm_start_position = arm_start_position
+        self.ef_start_position = ef_start_position
         self.arm_left = arm_left
         self.arm_right = arm_right
 
         easing_fn = lambda t: 3*t**2 - 2*t**3
         self.vel_fn = velocity_curve_fn(.25, .25, .1, easing_fn)
+
+    def reset_position(self):
+        self.ef_position = self.ef_start_position
 
     def execute_arm_path(self, delta):
         intervals = self.calculate_arm_path(delta)
@@ -37,7 +40,7 @@ class Robot:
 
     def execute_predefined_arm_path(self, path_name):
         if path_name == "reset":
-            self.ef_position = self.arm_start_position
+            self.ef_position = self.ef_start_position
         else:
             path_info = predefined_paths[path_name]
             path = path_info['path']

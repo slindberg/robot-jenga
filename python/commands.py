@@ -23,6 +23,8 @@ class CommandProtocol:
     def handle_command(self, command, args):
         if command == 'raw':
             return args
+        elif command == 'reset':
+            return self.robot.reset_position()
         elif command == 'z':
             return self.zaxis_command(*args)
         elif command == 'arm':
