@@ -16,24 +16,27 @@ class CommandProtocol:
         self.robot = robot
 
     def handle_command(self, command, args):
-        if command == 'raw':
-            return args
-        elif command == 'reset':
-            return self.robot.reset_position()
-        elif command == 'z':
-            return self.zaxis_command(*args)
-        elif command == 'arm':
-            return self.arm_command(*args)
-        elif command == 'ef':
-            return self.ef_command(*args)
-        elif command == 'fire':
-            return self.fire_command()
-        elif command == 'begin':
-            return self.begin_turn_command()
-        elif command == 'end':
-            return self.end_turn_command()
-        else:
-            raise CommandError("Unknown command'" + command + "'")
+        try:
+            if command == 'raw':
+                return args
+            elif command == 'reset':
+                return self.robot.reset_position()
+            elif command == 'z':
+                return self.zaxis_command(*args)
+            elif command == 'arm':
+                return self.arm_command(*args)
+            elif command == 'ef':
+                return self.ef_command(*args)
+            elif command == 'fire':
+                return self.fire_command()
+            elif command == 'begin':
+                return self.begin_turn_command()
+            elif command == 'end':
+                return self.end_turn_command()
+            else:
+                raise CommandError("Unknown command'" + command + "'")
+        except TypeError:
+            raise CommandError('Bad arguments')
 
     def zaxis_command(self, direction, distance = '0'):
         if direction == 'home':
