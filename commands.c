@@ -4,7 +4,7 @@
 int8_t left_intervals[256];
 int8_t right_intervals[256];
 
-arm_path_t custom_arm_path = {
+arm_path_t arm_path = {
   .left = {
     .intervals = left_intervals,
     .length = 0,
@@ -51,12 +51,8 @@ void wait_for_command() {
       handle_zaxis_move_command();
       break;
 
-    case 'P':
-      handle_predefined_arm_move_command();
-      break;
-
     case 'A':
-      handle_custom_arm_move_command();
+      handle_arm_move_command();
       break;
 
     case 'R':
@@ -104,14 +100,7 @@ void handle_zaxis_move_command() {
   move_zaxis(distance);
 }
 
-void handle_predefined_arm_move_command() {
-  // The next two bytes are the number of the predefined path
-  int path_number = read_int8();
-
-  start_arm_path(&arm_paths[path_number - 1]);
-}
-
-void handle_custom_arm_move_command() {
+void handle_arm_move_command() {
   // The next two bytes are the number of intervals in the path
   char path_size = read_int8();
 
@@ -119,10 +108,10 @@ void handle_custom_arm_move_command() {
   read_int8_array(left_intervals, path_size);
   read_int8_array(right_intervals, path_size);
 
-  custom_arm_path.left.length = path_size;
-  custom_arm_path.right.length = path_size;
+  arm_path.left.length = path_size;
+  arm_path.right.length = path_size;
 
-  start_arm_path(&custom_arm_path);
+  start_arm_path(&arm_path);
 }
 
 void handle_ef_rotate_command() {
