@@ -4,7 +4,6 @@
 #include <avr/io.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
 #include "uart_functions.h"
 
 char read_command();

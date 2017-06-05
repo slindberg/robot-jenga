@@ -7,12 +7,9 @@
  * Jenga Robot
  */
 
-#include <stdio.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include <math.h>
-#include <stdlib.h>
 #include "uart_functions.h"
 #include "commands.h"
 #include "arm_control.h"
