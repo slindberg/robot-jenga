@@ -3,6 +3,7 @@
 import sys
 from controller import Controller, NotConnectedError
 from commands import CommandError
+from robot import PathError
 from robot_instance import robot
 
 controller = Controller(robot)
@@ -31,7 +32,7 @@ while True:
             sys.stdout.flush()
 
         print("")
-    except (NotConnectedError, CommandError) as err:
+    except (NotConnectedError, CommandError, PathError) as err:
         print('Error: ' + err.message)
     except KeyboardInterrupt:
         sys.exit();

@@ -1,10 +1,5 @@
 from geometry import Point
-
-predefined_paths = {
-    'enter': 1,
-    'exit': 2,
-    'reset': 3,
-}
+from paths import predefined_paths
 
 # (1 rev / 4mm)*(1000 steps / 1 rev)*(14.5mm / block) = 3625 steps/block
 block_height = 3625

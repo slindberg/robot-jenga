@@ -4,6 +4,9 @@ from scipy import integrate
 from geometry import *
 from paths import *
 
+class PathError(Exception):
+    pass
+
 class Arm:
     def __init__(self, p_base, r_input, r_follower, gear_ratio, microsteps, steps_per_rev):
         self.p_base = p_base
@@ -39,25 +42,25 @@ class Robot:
         return intervals
 
     def execute_predefined_arm_path(self, path_name):
+        path_info = predefined_paths[path_name]
+        path = path_info['path']
+        duration = path_info['duration']
+        path_fn = path.path_fn(self.ef_position)
+        intervals = self.step_intervals_for_path(path_fn, duration)
+
         if path_name == "reset":
             self.ef_position = self.ef_start_position
         else:
-            path_info = predefined_paths[path_name]
-            path = path_info['path']
-            duration = path_info['duration']
-            path_fn = path.path_fn(self.ef_position)
             self.ef_position = path_fn(1)
-            return self.step_intervals_for_path(path_fn, duration)
+
+        return intervals
 
     def calculate_arm_path(self, delta):
         duration = delta.length()/self.average_arm_speed
         path = LinePath(delta)
         path_fn = path.path_fn(self.ef_position)
 
-        try:
-            return self.step_intervals_for_path(path_fn, duration)
-        except ValueError:
-            raise Error('Invalid path geometry')
+        return self.step_intervals_for_path(path_fn, duration)
 
     def samples_for_duration(self, duration):
         return int(math.ceil(duration/(self.interval_size*self.timer_delay)))
@@ -66,7 +69,10 @@ class Robot:
         n_points = self.samples_for_duration(duration)
         step_fn = self.step_fn(path_fn)
 
-        return self.step_intervals_for_steps(step_fn, n_points)
+        try:
+            return self.step_intervals_for_steps(step_fn, n_points)
+        except ValueError:
+            raise PathError('Invalid path geometry')
 
     def step_intervals_for_steps(self, step_fn, n_points):
         pos_curve = self.pos_curve_for_n(n_points)

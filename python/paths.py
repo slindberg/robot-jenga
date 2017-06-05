@@ -54,6 +54,8 @@ class ReversePath(Path):
     def position_for_t(self, t, start = Point(0, 0)):
         return start - self.offset + self.forward_path.position_for_t(1-t)
 
+reset_path = LinePath(Point(05, 0))
+
 enter_path = CompoundPath([
     ArcPath(Point(-221.49248,184.9257), 340.2250, False),
     LinePath(Point(-107.5,230)),
@@ -68,6 +70,11 @@ side_path = CompoundPath([
 ])
 
 predefined_paths = {
+    'reset': {
+        'duration': 0.2,
+        'start': Point(-8.50752, -184.9257),
+        'path': reset_path,
+    },
     'enter': {
         'duration': 3,
         'start': Point(-8.50752, -184.9257),

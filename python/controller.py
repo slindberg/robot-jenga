@@ -71,7 +71,10 @@ class Controller:
 
             yield char
 
-    def execute_command(self, command, args):
+    def execute_command(self, command, *args):
+        if len(args) == 1 and isinstance(args[0], list):
+            args = args[0]
+
         data = self.commander.handle_command(command, args)
         return self.send(data) if data else []
 
