@@ -14,12 +14,12 @@ int16_t ef_angle = 0; //reference ef_angle
 int16_t ef_set_point = 0; //where to go
 int8_t ef_dir = 0;
 
-int16_t get_ef_angle() {
-  return ef_angle;
+int32_t *get_ef_angle() {
+  return &ef_angle;
 }
 
-int16_t get_ef_set_point() {
-  return ef_set_point;
+int32_t *get_ef_set_point() {
+  return &ef_set_point;
 }
 
 pid_params_t *get_ef_pid_params() {

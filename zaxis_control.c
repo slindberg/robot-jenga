@@ -18,12 +18,12 @@ uint8_t z_homing = 0; //whether the z-axis is currently homing
 //break_dir keeps track of which limit switch it hit
 int8_t z_break_dir = 0; //1 down, -1 up, 0 undefined
 
-int32_t get_zaxis_position() {
-  return z_position;
+int32_t *get_zaxis_position() {
+  return &z_position;
 }
 
-int32_t get_zaxis_set_point() {
-  return z_set_point;
+int32_t *get_zaxis_set_point() {
+  return &z_set_point;
 }
 
 pid_params_t *get_zaxis_pid_params() {
