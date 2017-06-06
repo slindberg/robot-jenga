@@ -18,6 +18,9 @@ OBJDUMP        = avr-objdump
 
 all: $(PRG).elf lst text eeprom
 
+debug: LDFLAGS := $(LDFLAGS),-u,vfprintf,-lprintf_flt
+debug: all
+
 $(PRG).elf: $(OBJ)
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^ $(LIBS)
 

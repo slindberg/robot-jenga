@@ -22,6 +22,10 @@ int16_t get_ef_set_point() {
   return ef_set_point;
 }
 
+pid_params_t *get_ef_pid_params() {
+  return &ef_pid_params;
+}
+
 void init_ef_pid() {
   init_pid_state(&ef_pid_state, &ef_pid_params);
 }

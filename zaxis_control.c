@@ -26,6 +26,10 @@ int32_t get_zaxis_set_point() {
   return z_set_point;
 }
 
+pid_params_t *get_zaxis_pid_params() {
+  return &z_pid_params;
+}
+
 void init_zaxis_pid() {
   init_pid_state(&z_pid_state, &z_pid_params);
 }

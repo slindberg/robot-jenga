@@ -19,6 +19,7 @@ void handle_zaxis_move_command();
 void handle_arm_move_command();
 void handle_ef_rotate_command();
 void handle_fire_solenoid_command();
+void handle_update_pid_command();
 void handle_bad_command(char command);
 
 void debug_ef_position();

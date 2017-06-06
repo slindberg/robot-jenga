@@ -9,6 +9,7 @@
 
 int32_t get_zaxis_position();
 int32_t get_zaxis_set_point();
+pid_params_t *get_zaxis_pid_params();
 
 void init_zaxis_pid();
 

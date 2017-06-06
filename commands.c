@@ -63,6 +63,10 @@ void wait_for_command() {
       handle_fire_solenoid_command();
       break;
 
+    case 'P':
+      handle_update_pid_command();
+      break;
+
     default:
       handle_bad_command(command);
       return;
@@ -161,5 +165,68 @@ void debug_zaxis_position() {
     write_str(buffer);
     // _delay_ms(10);
   } while (current_pos != set_point);
+}
+
+void handle_update_pid_command() {
+  char motor = uart_getc();
+  char param_name = uart_getc();
+  char dir = uart_getc();
+  pid_params_t *pid_params;
+  void (*update_params)();
+  float *param;
+
+  switch (motor) {
+    case 'z':
+      pid_params = get_zaxis_pid_params();
+      update_params = init_zaxis_pid;
+      break;
+
+    case 'r':
+      pid_params = get_ef_pid_params();
+      update_params = init_ef_pid;
+      break;
+
+    default:
+      write_str("Bad motor");
+      return;
+  }
+
+  switch (param_name) {
+    case 'p':
+      param = &(pid_params->kp);
+      break;
+
+    case 'i':
+      param = &(pid_params->ki);
+      break;
+
+    case 'd':
+      param = &(pid_params->kd);
+      break;
+
+    default:
+      write_str("Bad param");
+      return;
+  }
+
+  switch (dir) {
+    case '+':
+      *param += 0.1;
+      break;
+
+    case '-':
+      *param -= 0.1;
+      break;
+
+    default:
+      write_str("Bad direction");
+      return;
+  }
+
+  update_params();
+
+  char buffer[64];
+  snprintf(buffer, sizeof(buffer), "kp: %2.1f, ki: %2.1f, kd: %2.1f", pid_params->kp, pid_params->ki, pid_params->kd);
+  write_str(buffer);
 }
 
