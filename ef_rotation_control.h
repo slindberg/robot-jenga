@@ -7,8 +7,9 @@
 
 //about ~475 ticks per rev
 
-int32_t *get_ef_angle();
-int32_t *get_ef_set_point();
+int32_t get_ef_angle();
+int32_t get_ef_set_point();
+uint16_t get_ef_duty();
 pid_params_t *get_ef_pid_params();
 
 void init_ef_pid();

@@ -22,6 +22,6 @@ void handle_fire_solenoid_command();
 void handle_update_pid_command();
 void handle_bad_command(char command);
 
-void debug_position(int32_t *current_pos, int32_t *set_point, uint8_t duty);
+void debug_position(int32_t (*current_pos)(), int32_t (*set_point)(), uint16_t (*duty)());
 
 #endif

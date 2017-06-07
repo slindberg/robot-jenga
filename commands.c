@@ -103,7 +103,7 @@ void handle_zaxis_move_command() {
 
   move_zaxis(distance);
 
-  // debug_position(get_zaxis_position(), get_zaxis_set_point(), OCR1B);
+  // debug_position(get_zaxis_position, get_zaxis_set_point, get_zaxis_duty);
 }
 
 void handle_arm_move_command() {
@@ -126,7 +126,7 @@ void handle_ef_rotate_command() {
 
   rotate_ef(angle);
 
-  // debug_position(get_ef_angle(), get_ef_set_point(), OCR1C);
+  // debug_position(get_ef_angle, get_ef_set_point, get_ef_duty);
 }
 
 void handle_fire_solenoid_command() {
@@ -204,16 +204,16 @@ void handle_update_pid_command() {
   write_str(buffer);
 }
 
-void debug_position(int32_t *current_pos, int32_t *set_point, uint8_t duty) {
+void debug_position(int32_t (*current_pos)(), int32_t (*set_point)(), uint16_t (*duty)()) {
   char buffer[64];
   uint8_t post_count = 0;
 
   while (post_count < 10) {
-    snprintf(buffer, sizeof(buffer), "%ld %ld %u\n", *current_pos, *set_point, duty);
+    snprintf(buffer, sizeof(buffer), "%ld %ld %u\n", current_pos(), set_point(), duty());
     write_str(buffer);
     // _delay_ms(10);
 
-    if (*current_pos == *set_point) {
+    if (current_pos() == set_point()) {
       post_count++;
     } else {
       post_count = 0;

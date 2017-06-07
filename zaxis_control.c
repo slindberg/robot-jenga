@@ -11,19 +11,24 @@ pid_params_t z_pid_params = {
 pid_state_t z_pid_state;
 
 int32_t z_set_point = 0; //where to go
-int32_t z_position = 0; //reference z_position
+int32_t z_position = 0; //reference position
+int16_t z_duty = 0; //pwm duty cycle
 int8_t z_dir = 0; //1 down, -1 is up, 0 is undefined
 uint8_t run_zmotor = 0; //enables the motor to run or nah
 uint8_t z_homing = 0; //whether the z-axis is currently homing
 //break_dir keeps track of which limit switch it hit
 int8_t z_break_dir = 0; //1 down, -1 up, 0 undefined
 
-int32_t *get_zaxis_position() {
-  return &z_position;
+int32_t get_zaxis_position() {
+  return z_position;
 }
 
-int32_t *get_zaxis_set_point() {
-  return &z_set_point;
+int32_t get_zaxis_set_point() {
+  return z_set_point;
+}
+
+uint16_t get_zaxis_duty() {
+  return z_duty;
 }
 
 pid_params_t *get_zaxis_pid_params() {
@@ -56,7 +61,6 @@ void move_zaxis_absolute(int32_t set_point) {
 //gets called with timer0
 uint16_t process_zaxis() {
   static uint8_t count = 0;
-  static uint16_t z_duty = 0;
 
   if (run_zmotor) {
     if (z_set_point == z_position) {

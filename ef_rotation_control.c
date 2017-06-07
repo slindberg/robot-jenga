@@ -12,13 +12,18 @@ pid_state_t ef_pid_state;
 
 int32_t ef_angle = 0; //reference angle
 int32_t ef_set_point = 0; //where to go
+uint16_t ef_duty = 0; //pwm duty cycle
 
-int32_t *get_ef_angle() {
-  return &ef_angle;
+int32_t get_ef_angle() {
+  return ef_angle;
 }
 
-int32_t *get_ef_set_point() {
-  return &ef_set_point;
+int32_t get_ef_set_point() {
+  return ef_set_point;
+}
+
+uint16_t get_ef_duty() {
+  return ef_duty;
 }
 
 pid_params_t *get_ef_pid_params() {
@@ -39,7 +44,6 @@ void rotate_ef_absolute(int16_t set_point) {
 
 uint16_t process_ef_rotation() {
   static uint8_t count = 0;
-  static uint16_t ef_duty = 0;
 
   if (ef_set_point == ef_angle) {
     ef_halt();
@@ -52,12 +56,12 @@ uint16_t process_ef_rotation() {
       set_pid_direction(&ef_pid_state, PID_REVERSE);
       ef_cw();
     }
-  }
 
-  if (count == 0) {
-    ef_duty = step_pid(&ef_pid_state, ef_angle, ef_set_point);
+    if (count == 0) {
+      ef_duty = step_pid(&ef_pid_state, ef_angle, ef_set_point);
+    }
+    count++;
   }
-  count++;
 
   return ef_duty;
 }
