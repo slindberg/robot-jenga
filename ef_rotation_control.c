@@ -48,6 +48,7 @@ uint16_t process_ef_rotation() {
   if (ef_set_point == ef_angle) {
     ef_halt();
     ef_duty = 0;
+    reset_pid_error(&ef_pid_state);
   } else {
     if (ef_set_point > ef_angle) {
       set_pid_direction(&ef_pid_state, PID_DIRECT);

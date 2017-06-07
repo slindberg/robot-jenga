@@ -32,4 +32,6 @@ int32_t step_pid(pid_state_t *state, int32_t input, int32_t set_point);
 
 void set_pid_direction(pid_state_t *state, pid_dir_t direction);
 
+void reset_pid_error(pid_state_t *state);
+
 #endif

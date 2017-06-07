@@ -46,3 +46,7 @@ void set_pid_direction(pid_state_t *state, pid_dir_t direction) {
     state->direction = direction;
   }
 }
+
+void reset_pid_error(pid_state_t *state) {
+  state->sum_error = 0;
+}

@@ -66,6 +66,7 @@ uint16_t process_zaxis() {
     if (z_set_point == z_position) {
       z_halt();
       z_duty = 0;
+      reset_pid_error(&z_pid_state);
     } else {
       if (z_set_point > z_position) {
         set_pid_direction(&z_pid_state, PID_DIRECT);
