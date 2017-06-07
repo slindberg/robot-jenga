@@ -4,15 +4,14 @@ pid_params_t ef_pid_params = {
 	.kp = 1.0,
 	.ki = 0.0,
 	.kd = 0.0,
-	.min_output = 1700,
-	.max_output = 2200,
+	.min_output = 2000,
+	.max_output = 2100,
 };
 
 pid_state_t ef_pid_state;
 
-int16_t ef_angle = 0; //reference ef_angle
-int16_t ef_set_point = 0; //where to go
-int8_t ef_dir = 0;
+int32_t ef_angle = 0; //reference angle
+int32_t ef_set_point = 0; //where to go
 
 int32_t *get_ef_angle() {
   return &ef_angle;
@@ -42,18 +41,19 @@ uint16_t process_ef_rotation() {
   static uint8_t count = 0;
   static uint16_t ef_duty = 0;
 
-  if (ef_set_point > ef_angle) {
-    set_pid_direction(&ef_pid_state, PID_DIRECT);
-    ef_ccw();
-  } else if (ef_set_point < ef_angle) {
-    set_pid_direction(&ef_pid_state, PID_REVERSE);
-    ef_cw();
-  } else {
+  if (ef_set_point == ef_angle) {
     ef_halt();
     ef_duty = 0;
+  } else {
+    if (ef_set_point > ef_angle) {
+      set_pid_direction(&ef_pid_state, PID_DIRECT);
+      ef_ccw();
+    } else {
+      set_pid_direction(&ef_pid_state, PID_REVERSE);
+      ef_cw();
+    }
   }
 
-  // TODO: Change timer interval to avoid this counter
   if (count == 0) {
     ef_duty = step_pid(&ef_pid_state, ef_angle, ef_set_point);
   }
@@ -63,11 +63,9 @@ uint16_t process_ef_rotation() {
 }
 
 void ef_rotation_encoder() {
-  if (bit_is_set(PINF,SE2_PIN)) {
-    ef_dir = -1;
+  if (bit_is_set(PINF, SE2_PIN)) {
     ef_angle++;
   } else {
-    ef_dir = 1;
     ef_angle--;
   }
 }
