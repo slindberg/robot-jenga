@@ -18,7 +18,7 @@ class CommandProtocol:
     def handle_command(self, command, args):
         try:
             if command == 'raw':
-                return args
+                return args[0]
             elif command == 'reset':
                 return self.robot.reset_position()
             elif command == 'z':
